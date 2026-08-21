@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/mongodb:/data/db
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/docucity}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - SECRET_KEY=docucity-lahore-super-secret-key-2026
+      - CHROMADB_DIR=/app/data/chromadb
+      - GEOJSON_DIR=/app/data/geojson
+    volumes:
+      - ./data/chromadb:/app/data/chromadb
+      - ./data/geojson:/app/data/geojson
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/docucity}
+      - FASTAPI_URL=http://backend:8000
+      - JWT_SECRET=docucity-lahore-super-secret-key-2026
+    depends_on:
+      - backend
+      - mongodb
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+    restart: unless-stopped
