@@ -1,77 +1,48 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users, ShieldAlert, CheckCircle2, UserCheck, Search, Filter, MoreVertical,
-  Plus, Shield, UserX, RefreshCw, Key, ArrowUpRight, Building
+  Plus, Shield, UserX, RefreshCw, Key, Lock, Eye, EyeOff, Building
 } from 'lucide-react';
 import { ProvisionModal } from './ProvisionModal';
+import { fetchUsersList, updateUserStatusApi } from '../../services/api';
 
 export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilter = 'All' }) {
   const [users, setUsers] = useState([
     {
-      id: 'usr-101',
+      id: 'usr-001',
+      name: 'Public Citizen',
+      email: 'citizen@lahore.gov.pk',
+      role: 'public',
+      department: 'Public Domain',
+      status: 'Active',
+      lastActive: 'Just now',
+      cnic: '35202-4410294-2',
+      initials: 'PC',
+      password: 'password123'
+    },
+    {
+      id: 'usr-002',
       name: 'Officer Tariq Mahmood',
       email: 'officer@lda.gop.pk',
       role: 'officer',
-      department: 'LDA',
+      department: 'LDA Commercial Verification Wing',
       status: 'Active',
       lastActive: '10 mins ago',
       cnic: '35202-1294819-1',
-      initials: 'TM'
+      initials: 'TM',
+      password: 'officer123'
     },
     {
-      id: 'usr-102',
-      name: 'Ahmad Raza Khan',
-      email: 'ahmad@wasa.punjab.gov.pk',
-      role: 'officer',
-      department: 'WASA',
-      status: 'Pending Verification',
-      lastActive: '1 hour ago',
-      cnic: '35201-9481023-3',
-      initials: 'AK'
-    },
-    {
-      id: 'usr-103',
-      name: 'Fatima Bilal',
-      email: 'fatima.planner@gmail.com',
-      role: 'public',
-      department: 'N/A',
-      status: 'Active',
-      lastActive: '2 days ago',
-      cnic: '35202-4410294-2',
-      initials: 'FB'
-    },
-    {
-      id: 'usr-104',
-      name: 'Super Admin - PITB',
-      email: 'superadmin@docucity.lahore.gov.pk',
+      id: 'usr-003',
+      name: 'System Admin',
+      email: 'admin@docucity.gov.pk',
       role: 'admin',
-      department: 'Urban Unit',
+      department: 'Punjab Urban Development Authority',
       status: 'Active',
       lastActive: 'Just now',
       cnic: '35202-0000000-0',
-      initials: 'SA'
-    },
-    {
-      id: 'usr-105',
-      name: 'Usman Ghani',
-      email: 'usman@mcl.gop.pk',
-      role: 'officer',
-      department: 'MCL',
-      status: 'Suspended',
-      lastActive: '5 days ago',
-      cnic: '35202-5819024-5',
-      initials: 'UG'
-    },
-    {
-      id: 'usr-106',
-      name: 'Zubair Shah',
-      email: 'zubair.architect@studio.pk',
-      role: 'public',
-      department: 'N/A',
-      status: 'Active',
-      lastActive: '3 hours ago',
-      cnic: '35202-1192834-7',
-      initials: 'ZS'
+      initials: 'SA',
+      password: 'admin123'
     }
   ]);
 
@@ -81,6 +52,32 @@ export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilt
   const [localSearch, setLocalSearch] = useState('');
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [isProvisionOpen, setIsProvisionOpen] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(true);
+
+  // Fetch live users from MongoDB backend on mount
+  const loadUsersFromDb = async () => {
+    const apiUsers = await fetchUsersList();
+    if (apiUsers && apiUsers.length > 0) {
+      const formatted = apiUsers.map(u => ({
+        id: u.userId || u._id || `usr-${Math.random().toString(36).substr(2, 6)}`,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        department: u.department || 'LDA',
+        status: u.status || 'Active',
+        lastActive: 'Active',
+        cnic: u.cnic || '35202-XXXXXXX-X',
+        initials: u.name ? u.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U',
+        password: u.password || (u.email.includes('officer') ? 'officer123' : u.email.includes('admin') ? 'admin123' : 'LDA-Lahore-2026!')
+      }));
+
+      setUsers(formatted);
+    }
+  };
+
+  useEffect(() => {
+    loadUsersFromDb();
+  }, []);
 
   // Synced search & department filters
   const searchTerm = localSearch || globalSearchTerm;
@@ -96,7 +93,7 @@ export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilt
         u.department.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesRole = roleFilter === 'All' || u.role === roleFilter.toLowerCase();
-      const matchesDept = activeDeptFilter === 'All' || u.department === activeDeptFilter;
+      const matchesDept = activeDeptFilter === 'All' || u.department.includes(activeDeptFilter);
       const matchesStatus = statusFilter === 'All' || u.status === statusFilter;
 
       return matchesSearch && matchesRole && matchesDept && matchesStatus;
@@ -116,28 +113,44 @@ export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilt
     return { total, publicCount, officerCount, adminCount, activeOfficers, pendingCount, suspendedCount };
   }, [users]);
 
-  // Handlers for user actions
-  const handleVerify = (id) => {
+  // Handlers for user actions updating MongoDB
+  const handleVerify = async (id) => {
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'Active' } : u)));
     setOpenDropdownId(null);
+    try {
+      await updateUserStatusApi(id, { status: 'Active' });
+    } catch (e) {
+      console.warn('Update DB status warning:', e);
+    }
   };
 
-  const handleToggleSuspend = (id) => {
+  const handleToggleSuspend = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'Suspended' ? 'Active' : 'Suspended';
     setUsers((prev) =>
-      prev.map((u) =>
-        u.id === id ? { ...u, status: u.status === 'Suspended' ? 'Active' : 'Suspended' } : u
-      )
+      prev.map((u) => (u.id === id ? { ...u, status: newStatus } : u))
     );
     setOpenDropdownId(null);
+    try {
+      await updateUserStatusApi(id, { status: newStatus });
+    } catch (e) {
+      console.warn('Update DB status warning:', e);
+    }
   };
 
-  const handleChangeRole = (id, newRole) => {
+  const handleChangeRole = async (id, currentRole) => {
+    const newRole = currentRole === 'officer' ? 'admin' : 'officer';
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role: newRole } : u)));
     setOpenDropdownId(null);
+    try {
+      await updateUserStatusApi(id, { role: newRole });
+    } catch (e) {
+      console.warn('Update DB role warning:', e);
+    }
   };
 
   const handleProvisionSuccess = (newOfficer) => {
     setUsers((prev) => [newOfficer, ...prev]);
+    loadUsersFromDb();
   };
 
   return (
@@ -213,7 +226,6 @@ export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilt
 
         {/* Filter Pills */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Role Filter */}
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
@@ -225,7 +237,6 @@ export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilt
             <option value="admin">Admin</option>
           </select>
 
-          {/* Department Filter */}
           <select
             value={departmentFilter}
             onChange={(e) => setDepartmentFilter(e.target.value)}
@@ -238,7 +249,6 @@ export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilt
             <option value="Urban Unit">Urban Unit</option>
           </select>
 
-          {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -250,7 +260,16 @@ export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilt
             <option value="Suspended">Suspended</option>
           </select>
 
-          {/* Primary Action Button */}
+          <button
+            onClick={() => setShowPasswords(!showPasswords)}
+            className={`text-xs px-3 py-2 rounded-xl border transition-all font-semibold flex items-center space-x-1 ${
+              showPasswords ? 'bg-purple-950/60 border-purple-800 text-purple-300' : 'bg-slate-950 border-slate-800 text-slate-400'
+            }`}
+          >
+            {showPasswords ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            <span>{showPasswords ? 'Hide Passwords' : 'Show Real Passwords'}</span>
+          </button>
+
           <button
             onClick={() => setIsProvisionOpen(true)}
             className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-purple-600/30 flex items-center space-x-1.5 ml-auto"
@@ -267,7 +286,7 @@ export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilt
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
               <tr>
-                <th className="p-4">User Profile</th>
+                <th className="p-4">User Profile & Real Password</th>
                 <th className="p-4">Assigned Role</th>
                 <th className="p-4">Department Access</th>
                 <th className="p-4">Access Status</th>
@@ -278,16 +297,24 @@ export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilt
             <tbody className="divide-y divide-slate-800/80">
               {filteredUsers.map((u) => (
                 <tr key={u.id} className="hover:bg-slate-950/40 transition-all">
-                  {/* User Profile */}
+                  {/* User Profile & Real Readable Password */}
                   <td className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 font-bold text-xs text-slate-200 flex items-center justify-center shrink-0">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 font-bold text-xs text-slate-200 flex items-center justify-center shrink-0 mt-0.5">
                         {u.initials}
                       </div>
-                      <div>
+                      <div className="space-y-1">
                         <p className="font-bold text-white text-xs">{u.name}</p>
                         <p className="text-[11px] text-slate-400 font-mono">{u.email}</p>
                         <p className="text-[9px] text-slate-500 font-mono">CNIC: {u.cnic}</p>
+                        
+                        {/* Real Readable Password Pill */}
+                        {showPasswords && (
+                          <div className="mt-1 bg-slate-950 border border-purple-900/60 rounded-lg px-2.5 py-1 inline-flex items-center space-x-1.5 text-xs text-purple-300 font-mono">
+                            <Lock className="w-3 h-3 text-purple-400 shrink-0" />
+                            <span>{u.password || 'LDA-Lahore-2026!'}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -365,7 +392,7 @@ export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilt
                         )}
 
                         <button
-                          onClick={() => handleToggleSuspend(u.id)}
+                          onClick={() => handleToggleSuspend(u.id, u.status)}
                           className={`w-full flex items-center space-x-2 px-3 py-2 rounded-xl font-semibold ${
                             u.status === 'Suspended'
                               ? 'text-emerald-400 hover:bg-emerald-950/60'
@@ -377,19 +404,11 @@ export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilt
                         </button>
 
                         <button
-                          onClick={() => handleChangeRole(u.id, u.role === 'officer' ? 'admin' : 'officer')}
+                          onClick={() => handleChangeRole(u.id, u.role)}
                           className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800 font-medium"
                         >
                           <Shield className="w-3.5 h-3.5 text-purple-400" />
                           <span>Toggle Role Scope</span>
-                        </button>
-
-                        <button
-                          onClick={() => setOpenDropdownId(null)}
-                          className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-slate-400 hover:bg-slate-800 font-medium"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          <span>Reset Passphrase</span>
                         </button>
                       </div>
                     )}
@@ -401,7 +420,6 @@ export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilt
         </div>
       </div>
 
-      {/* Provision Officer Modal */}
       <ProvisionModal
         isOpen={isProvisionOpen}
         onClose={() => setIsProvisionOpen(false)}

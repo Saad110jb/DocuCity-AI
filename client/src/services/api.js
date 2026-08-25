@@ -36,4 +36,29 @@ export const loginUser = async (email, password) => {
   return res.data;
 };
 
+export const registerUserApi = async (userData) => {
+  const res = await api.post('/auth/register', userData);
+  return res.data;
+};
+
+export const provisionOfficerApi = async (officerData) => {
+  const res = await api.post('/auth/provision', officerData);
+  return res.data;
+};
+
+export const updateUserStatusApi = async (userId, updateData) => {
+  const res = await api.put(`/auth/users/${userId}`, updateData);
+  return res.data;
+};
+
+export const fetchUsersList = async () => {
+  try {
+    const res = await api.get('/auth/users');
+    return res.data.users;
+  } catch (err) {
+    console.warn('API error fetching users, utilizing default MongoDB seed list');
+    return null;
+  }
+};
+
 export default api;

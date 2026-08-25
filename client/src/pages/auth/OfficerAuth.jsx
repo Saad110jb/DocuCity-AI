@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, Mail, Building, KeyRound, ArrowRight, ShieldAlert, Award } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, Building, KeyRound, ArrowRight, ShieldAlert, Award, Globe } from 'lucide-react';
 
 export function OfficerAuth({ onNavigateToPortal, onLoginSuccess }) {
   const [email, setEmail] = useState('officer@lda.gop.pk');
@@ -34,7 +34,7 @@ export function OfficerAuth({ onNavigateToPortal, onLoginSuccess }) {
       } else if (onNavigateToPortal) {
         onNavigateToPortal();
       }
-    }, 600);
+    }, 400);
   };
 
   return (
@@ -147,15 +147,12 @@ export function OfficerAuth({ onNavigateToPortal, onLoginSuccess }) {
             </button>
           </form>
 
-          {/* Department trust badges */}
-          <div className="pt-4 border-t border-slate-800">
-            <p className="text-[10px] text-slate-500 text-center uppercase tracking-wider mb-2 font-semibold">Supported Department Scopes</p>
-            <div className="flex justify-center items-center space-x-2 text-[10px] text-slate-400">
-              <span className="bg-slate-950 px-2.5 py-1 rounded border border-slate-800 font-mono">LDA</span>
-              <span className="bg-slate-950 px-2.5 py-1 rounded border border-slate-800 font-mono">WASA</span>
-              <span className="bg-slate-950 px-2.5 py-1 rounded border border-slate-800 font-mono">MCL</span>
-              <span className="bg-slate-950 px-2.5 py-1 rounded border border-slate-800 font-mono">URBAN UNIT</span>
-            </div>
+          <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-500">
+            <span>Scope: <span className="text-blue-400 font-mono">MUNICIPAL_OFFICER</span></span>
+            <a href="/" className="text-blue-400 hover:underline flex items-center space-x-1">
+              <Globe className="w-3 h-3" />
+              <span>Public GIS Map</span>
+            </a>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, Mail, Key, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, Key, ArrowRight, Sparkles, Globe } from 'lucide-react';
 
 export function AdminAuth({ onAdminLoginSuccess }) {
   const [email, setEmail] = useState('superadmin@docucity.lahore.gov.pk');
@@ -30,7 +30,7 @@ export function AdminAuth({ onAdminLoginSuccess }) {
       if (onAdminLoginSuccess) {
         onAdminLoginSuccess(superAdminUser);
       }
-    }, 500);
+    }, 400);
   };
 
   return (
@@ -110,8 +110,12 @@ export function AdminAuth({ onAdminLoginSuccess }) {
             </button>
           </form>
 
-          <div className="pt-2 text-center text-[10px] text-slate-500">
-            DocuCity Security Scope: <span className="text-purple-400 font-mono">ROLE_SUPER_ADMIN</span>
+          <div className="pt-3 border-t border-slate-800 text-center flex items-center justify-between text-[10px] text-slate-500">
+            <span>Security: <span className="text-purple-400 font-mono">SUPER_ADMIN</span></span>
+            <a href="/" className="text-purple-400 hover:underline flex items-center space-x-1">
+              <Globe className="w-3 h-3" />
+              <span>Public GIS Map</span>
+            </a>
           </div>
         </div>
       </div>

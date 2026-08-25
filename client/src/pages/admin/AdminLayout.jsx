@@ -1,11 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Users, Shield, Activity, Settings, LogOut, Building2, Search, Plus,
   ChevronRight, Filter, Lock, Cpu
 } from 'lucide-react';
 
-export function AdminLayout({ user, onLogout, onOpenProvision, children, searchTerm, setSearchTerm, departmentFilter, setDepartmentFilter }) {
-  const [activeNav, setActiveNav] = useState('users');
+export function AdminLayout({
+  user,
+  onLogout,
+  onOpenProvision,
+  children,
+  searchTerm,
+  setSearchTerm,
+  departmentFilter,
+  setDepartmentFilter,
+  activeAdminTab = 'users',
+  setActiveAdminTab
+}) {
   const currentTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
@@ -30,44 +40,69 @@ export function AdminLayout({ user, onLogout, onOpenProvision, children, searchT
 
           {/* Navigation Links */}
           <nav className="p-4 space-y-1.5">
+            {/* 1. User & Role Management */}
             <button
-              onClick={() => setActiveNav('users')}
+              onClick={() => setActiveAdminTab && setActiveAdminTab('admin-users')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                activeNav === 'users'
+                activeAdminTab === 'admin-users' || activeAdminTab === 'users'
                   ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
                   : 'text-slate-400 hover:bg-slate-800 hover:text-white'
               }`}
             >
               <div className="flex items-center space-x-3">
-                <Users className="w-4 h-4" />
+                <Users className="w-4 h-4 text-purple-300" />
                 <span>User & Role Management</span>
               </div>
               <ChevronRight className="w-3.5 h-3.5 opacity-60" />
             </button>
 
-            <div className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 opacity-60 cursor-not-allowed">
+            {/* 2. Security & Namespace Isolation */}
+            <button
+              onClick={() => setActiveAdminTab && setActiveAdminTab('admin-security')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                activeAdminTab === 'admin-security' || activeAdminTab === 'security'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
               <div className="flex items-center space-x-3">
-                <Shield className="w-4 h-4" />
+                <Shield className="w-4 h-4 text-emerald-400" />
                 <span>Security & Namespace</span>
               </div>
-              <span className="bg-slate-800 text-slate-400 text-[9px] px-2 py-0.5 rounded font-mono">Coming Soon</span>
-            </div>
+              <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+            </button>
 
-            <div className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 opacity-60 cursor-not-allowed">
+            {/* 3. System Monitoring & Audit Logs */}
+            <button
+              onClick={() => setActiveAdminTab && setActiveAdminTab('admin-audit')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                activeAdminTab === 'admin-audit' || activeAdminTab === 'audit'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
               <div className="flex items-center space-x-3">
-                <Activity className="w-4 h-4" />
+                <Activity className="w-4 h-4 text-amber-400" />
                 <span>System Monitoring & Audit</span>
               </div>
-              <span className="bg-slate-800 text-slate-400 text-[9px] px-2 py-0.5 rounded font-mono">Coming Soon</span>
-            </div>
+              <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+            </button>
 
-            <div className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-500 opacity-60 cursor-not-allowed">
+            {/* 4. Global Platform Control */}
+            <button
+              onClick={() => setActiveAdminTab && setActiveAdminTab('admin-settings')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                activeAdminTab === 'admin-settings' || activeAdminTab === 'settings'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
               <div className="flex items-center space-x-3">
-                <Settings className="w-4 h-4" />
+                <Settings className="w-4 h-4 text-blue-400" />
                 <span>Global Platform Control</span>
               </div>
-              <span className="bg-slate-800 text-slate-400 text-[9px] px-2 py-0.5 rounded font-mono">Coming Soon</span>
-            </div>
+              <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+            </button>
           </nav>
         </div>
 
@@ -104,12 +139,16 @@ export function AdminLayout({ user, onLogout, onOpenProvision, children, searchT
           <div className="flex items-center space-x-2 text-xs font-medium">
             <span className="text-purple-400">Admin</span>
             <span className="text-slate-600">/</span>
-            <span className="text-slate-200">User & Role Management</span>
+            <span className="text-slate-200">
+              {activeAdminTab === 'admin-security' && 'Security & Namespace Isolation'}
+              {activeAdminTab === 'admin-audit' && 'System Monitoring & Audit Logs'}
+              {activeAdminTab === 'admin-settings' && 'Global Platform Control'}
+              {activeAdminTab === 'admin-users' && 'User & Role Management'}
+            </span>
           </div>
 
           {/* Controls toolbar */}
           <div className="flex items-center space-x-3">
-            {/* Global search */}
             <div className="relative w-64">
               <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
               <input
@@ -121,7 +160,6 @@ export function AdminLayout({ user, onLogout, onOpenProvision, children, searchT
               />
             </div>
 
-            {/* Department filter dropdown pill */}
             <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1">
               <Filter className="w-3.5 h-3.5 text-slate-500 mr-1.5" />
               <select
@@ -137,7 +175,6 @@ export function AdminLayout({ user, onLogout, onOpenProvision, children, searchT
               </select>
             </div>
 
-            {/* Action button */}
             <button
               onClick={onOpenProvision}
               className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-purple-600/30 flex items-center space-x-1.5"

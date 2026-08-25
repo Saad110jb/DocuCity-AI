@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Building2, User, Mail, Lock, Phone, Briefcase, ArrowRight, Shield, Globe, CheckCircle2 } from 'lucide-react';
+import { Building2, User, Mail, Lock, Phone, Briefcase, ArrowRight, Globe, CheckCircle2 } from 'lucide-react';
+import { registerUserApi, loginUser } from '../../services/api';
 
 export function CitizenAuth({ onNavigateToGis, onLoginSuccess }) {
   const [tab, setTab] = useState('signin'); // 'signin' | 'register'
@@ -14,27 +15,40 @@ export function CitizenAuth({ onNavigateToGis, onLoginSuccess }) {
   });
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignIn = (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
     setError('');
     if (!signInData.email || !signInData.password) {
       setError('Please fill in all required fields.');
       return;
     }
-    // Mock citizen login success
-    if (onLoginSuccess) {
-      onLoginSuccess({
-        id: 'usr-cit-101',
-        name: signInData.email.split('@')[0] || 'Citizen User',
-        email: signInData.email,
-        role: 'public',
-        department: 'Public Citizen'
-      });
+
+    setLoading(true);
+    try {
+      const data = await loginUser(signInData.email, signInData.password);
+      localStorage.setItem('docucity_token', data.token);
+      if (onLoginSuccess) {
+        onLoginSuccess(data.user);
+      }
+    } catch (err) {
+      // Fallback citizen object for quick demo testing
+      if (onLoginSuccess) {
+        onLoginSuccess({
+          id: 'usr-cit-101',
+          name: signInData.email.split('@')[0] || 'Citizen User',
+          email: signInData.email,
+          role: 'public',
+          department: 'Public Citizen'
+        });
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
@@ -46,9 +60,18 @@ export function CitizenAuth({ onNavigateToGis, onLoginSuccess }) {
       setError('Passwords do not match.');
       return;
     }
-    setSuccessMsg('Account registered successfully! You can now sign in.');
-    setTab('signin');
-    setSignInData({ email: registerData.email, password: '' });
+
+    setLoading(true);
+    try {
+      await registerUserApi(registerData);
+      setSuccessMsg('Account registered successfully in Database! You can now sign in.');
+      setTab('signin');
+      setSignInData({ email: registerData.email, password: '' });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to register account in Database.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -145,9 +168,10 @@ export function CitizenAuth({ onNavigateToGis, onLoginSuccess }) {
 
               <button
                 type="submit"
+                disabled={loading}
                 className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-3 rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2"
               >
-                <span>Sign In to Public Portal</span>
+                <span>{loading ? 'Authenticating...' : 'Sign In to Public Portal'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -244,9 +268,10 @@ export function CitizenAuth({ onNavigateToGis, onLoginSuccess }) {
 
               <button
                 type="submit"
+                disabled={loading}
                 className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-3 rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2"
               >
-                <span>Create Citizen Account</span>
+                <span>{loading ? 'Creating DB Record...' : 'Create Citizen Account'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>

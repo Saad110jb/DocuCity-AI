@@ -1,40 +1,61 @@
 import React, { useState } from 'react';
-import { X, UserPlus, Building, Mail, Key, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { X, UserPlus, Building, Mail, Key, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { provisionOfficerApi } from '../../services/api';
 
 export function ProvisionModal({ isOpen, onClose, onProvisionSuccess }) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [department, setDepartment] = useState('LDA');
-  const [scope, setScope] = useState('full'); // 'ingestion' | 'ocr' | 'full'
+  const [scope, setScope] = useState('full');
   const [tempPassword, setTempPassword] = useState('LDA-Lahore-2026!');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!fullName || !email) return;
 
-    const newOfficer = {
-      id: `usr-off-${Math.floor(100 + Math.random() * 900)}`,
-      name: fullName,
-      email: email,
-      role: 'officer',
-      department: department,
-      status: 'Active',
-      scope: scope,
-      lastActive: 'Just now',
-      cnic: '35202-8491029-1'
-    };
+    setLoading(true);
+    setError('');
 
-    setIsSuccess(true);
-    setTimeout(() => {
-      onProvisionSuccess(newOfficer);
-      setIsSuccess(false);
-      setFullName('');
-      setEmail('');
-      onClose();
-    }, 1000);
+    try {
+      const res = await provisionOfficerApi({
+        name: fullName,
+        email: email,
+        department: department,
+        tempPassword: tempPassword,
+        scope: scope,
+        role: 'officer'
+      });
+
+      setIsSuccess(true);
+      setTimeout(() => {
+        const savedOfficer = {
+          id: res.user?.userId || res.user?._id || `usr-off-${Date.now()}`,
+          name: res.user?.name || fullName,
+          email: res.user?.email || email,
+          role: 'officer',
+          department: res.user?.department || department,
+          status: 'Active',
+          lastActive: 'Just now',
+          cnic: res.user?.cnic || '35202-8491029-1',
+          initials: fullName.split(' ').map(n => n[0]).join('').toUpperCase()
+        };
+        onProvisionSuccess(savedOfficer);
+        setIsSuccess(false);
+        setFullName('');
+        setEmail('');
+        setLoading(false);
+        onClose();
+      }, 1000);
+    } catch (err) {
+      console.error('Provisioning error:', err);
+      setError(err.response?.data?.error || 'Failed to save provisioned officer to Database.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -53,18 +74,25 @@ export function ProvisionModal({ isOpen, onClose, onProvisionSuccess }) {
           </div>
           <div>
             <h2 className="text-base font-bold text-white">Provision New Municipal Officer</h2>
-            <p className="text-xs text-slate-400">Grant verified government role access to DocuCity Lahore</p>
+            <p className="text-xs text-slate-400">Save & grant verified government role access in MongoDB</p>
           </div>
         </div>
 
         {isSuccess ? (
           <div className="py-8 text-center space-y-3">
             <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto animate-bounce" />
-            <h3 className="text-sm font-bold text-white">Officer Account Successfully Provisioned!</h3>
-            <p className="text-xs text-slate-400">Credentials and temporary passphrase emitted to user database.</p>
+            <h3 className="text-sm font-bold text-white">Officer Record Saved in MongoDB Database!</h3>
+            <p className="text-xs text-slate-400">Credentials and temporary passphrase emitted to user collection.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="flex items-center space-x-2 text-xs bg-rose-950/60 border border-rose-800 text-rose-400 p-3 rounded-xl">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
             <div>
               <label className="text-xs text-slate-400 font-medium mb-1 block">Officer Full Name</label>
               <input
@@ -136,10 +164,20 @@ export function ProvisionModal({ isOpen, onClose, onProvisionSuccess }) {
 
             <button
               type="submit"
+              disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-3 rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2"
             >
-              <UserPlus className="w-4 h-4" />
-              <span>Confirm & Provision Officer Account</span>
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  <span>Saving Record into MongoDB...</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4" />
+                  <span>Confirm & Save Officer to MongoDB</span>
+                </>
+              )}
             </button>
           </form>
         )}
