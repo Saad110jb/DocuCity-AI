@@ -1,19 +1,41 @@
 const express = require('express');
-const multer = require('multer');
 const router = express.Router();
+const upload = require('../middleware/fileUpload');
 const { handleFileUpload } = require('../controllers/uploadController');
-const { verifyToken, requireRole } = require('../middleware/auth');
-const { getAuditLogs } = require('../models/DocumentAudit');
+const {
+  getIngestionDocuments,
+  uploadAndCategorizeDocument,
+  resolvePolicyConflict,
+  toggleStagingStatus,
+  deleteIngestionDocument
+} = require('../controllers/ingestionController');
+const {
+  getOcrDocumentDetails,
+  saveOcrCorrections,
+  normalizeUrduNastaliq
+} = require('../controllers/ocrController');
+const {
+  generateZoningCertificate,
+  exportComplianceAuditTrail
+} = require('../controllers/exportController');
 
-const upload = multer({ storage: multer.memoryStorage() });
+// Upload
+router.post('/upload', upload.single('file'), handleFileUpload);
 
-// Document upload route (Municipal Officer / Admin)
-router.post('/upload', verifyToken, requireRole(['officer', 'admin']), upload.single('file'), handleFileUpload);
+// Municipal Officer Ingestion & Smart Staging Endpoints
+router.get('/ingestion/list', getIngestionDocuments);
+router.post('/ingestion/upload', upload.single('file'), uploadAndCategorizeDocument);
+router.put('/ingestion/conflict/:documentId', resolvePolicyConflict);
+router.put('/ingestion/staging/:documentId', toggleStagingStatus);
+router.delete('/ingestion/:documentId', deleteIngestionDocument);
 
-// Audit trail logs route (Officer / Admin)
-router.get('/audit-logs', verifyToken, requireRole(['officer', 'admin']), async (req, res) => {
-  const logs = await getAuditLogs();
-  res.json({ logs });
-});
+// OCR & Bilingual Entity Correction Studio Endpoints
+router.get('/ocr/:documentId', getOcrDocumentDetails);
+router.post('/ocr/save', saveOcrCorrections);
+router.post('/ocr/normalize-urdu', normalizeUrduNastaliq);
+
+// Official Communication & Export Tools Endpoints
+router.post('/export/zoning-certificate', generateZoningCertificate);
+router.get('/export/audit-trail', exportComplianceAuditTrail);
 
 module.exports = router;
