@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Header } from './components/common/Header';
 import { DashboardPage } from './pages/index';
 import { PortalPage } from './pages/portal';
+import { CitizenPortalPage } from './pages/citizen/CitizenPortal';
 import { UploadModal } from './components/admin/UploadModal';
 import { CitizenAuth } from './pages/auth/CitizenAuth';
 import { OfficerAuth } from './pages/auth/OfficerAuth';
@@ -24,6 +25,7 @@ export default function App() {
     if (path.includes('/auth/officer') || path.includes('/officer/login')) return 'auth-officer';
     if (path.includes('/officer/portal') || path === '/portal') return 'officer-portal';
     if (path.includes('/auth/citizen') || path === '/citizen') return 'auth-citizen';
+    if (path.includes('/citizen/portal')) return 'citizen-portal';
     return 'gis';
   };
 
@@ -52,6 +54,7 @@ export default function App() {
     setCurrentView(targetView);
     let path = '/';
     if (targetView === 'auth-citizen') path = '/auth/citizen';
+    else if (targetView === 'citizen-portal') path = '/citizen/portal';
     else if (targetView === 'auth-officer') path = '/auth/officer/login';
     else if (targetView === 'auth-admin') path = '/auth/admin/login';
     else if (targetView === 'officer-portal') path = '/officer/portal';
@@ -66,7 +69,7 @@ export default function App() {
   // Login Success Handlers
   const handleCitizenLoginSuccess = (userObj) => {
     setCitizenUser(userObj);
-    navigateToView('gis');
+    navigateToView('citizen-portal');
   };
 
   const handleOfficerLoginSuccess = (userObj) => {
@@ -197,9 +200,26 @@ export default function App() {
     );
   }
 
+  // 8.5. VIEW: Citizen Portal (/citizen/portal)
+  if (currentView === 'citizen-portal') {
+    return (
+      <div className="h-screen bg-slate-950 text-slate-100 flex flex-col font-sans overflow-hidden">
+        <Header
+          activeTab={currentView}
+          setActiveTab={navigateToView}
+          citizenUser={citizenUser}
+          onCitizenLogout={() => setCitizenUser(null)}
+        />
+        <main className="flex-1 overflow-y-auto">
+          <CitizenPortalPage user={citizenUser} />
+        </main>
+      </div>
+    );
+  }
+
   // 9. PUBLIC DEFAULT VIEW: Interactive Public GIS Policy Explorer (/)
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="h-screen bg-slate-950 text-slate-100 flex flex-col font-sans overflow-hidden">
       <Header
         activeTab={currentView}
         setActiveTab={navigateToView}

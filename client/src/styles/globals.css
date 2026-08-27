@@ -44,3 +44,7 @@
   font-family: 'Noto Nastaliq Urdu', serif;
   line-height: 2.2;
 }
+
+.map-tiles-dark { 
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); 
+}

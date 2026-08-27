@@ -34,13 +34,13 @@ export function Header({ activeTab, setActiveTab, citizenUser, onCitizenLogout }
         </button>
 
         <button
-          onClick={() => setActiveTab('auth-citizen')}
+          onClick={() => setActiveTab(citizenUser ? 'citizen-portal' : 'auth-citizen')}
           className={`flex items-center space-x-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'auth-citizen' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+            (activeTab === 'auth-citizen' || activeTab === 'citizen-portal') ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <User className="w-3.5 h-3.5" />
-          <span>Citizen Portal</span>
+          <span>{citizenUser ? 'My Portal' : 'Citizen Portal'}</span>
         </button>
       </div>
 
