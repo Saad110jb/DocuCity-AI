@@ -342,38 +342,144 @@ export function PortalPage({ officerUser, onOfficerLogout }) {
     const filename = (doc?.filename || doc?.title || '').toLowerCase();
     const cat = (doc?.aiMetadata?.category || '').toLowerCase();
 
-    if (filename.includes('landuse') || cat.includes('commercial')) {
+    if (filename.includes('management and transfer') || filename.includes('2014 (xix')) {
       return [
         {
           num: "1",
-          category: "PERMANENT COMMERCIALIZATION FEES (RULE 4)",
+          category: "PROPERTY DISPOSAL & AUCTION (CLAUSE 4.1)",
           points: [
-            "Permanent commercial conversion fee charged at 20% of commercial DC rate table.",
-            "List A notified commercial roads permitted for full commercial conversion."
+            "Disposal of LDA properties strictly through transparent public auction or open tender.",
+            "Valuation assessed according to officially notified commercial/residential DC rates."
           ]
         },
         {
           num: "2",
-          category: "TEMPORARY COMMERCIAL RENEWAL (RULE 5)",
+          category: "TITLE TRANSFER & CONVEYANCE DEEDS",
           points: [
-            "Annual temporary commercial fee charged at 5% of commercial DC rate per annum.",
-            "10% late surcharge penalty imposed if not renewed within 30 days."
+            "Mandatory verification of title deeds, ownership history, and non-encumbrance clearance.",
+            "Payment of prescribed transfer fee prior to sanction of conveyance deed."
           ]
         },
         {
           num: "3",
-          category: "LAND USE ZONING CLASSIFICATIONS (RULE 3)",
+          category: "ALLOTMENT TERMS & INSTALLMENT DEFAULTS",
           points: [
-            "Zones classified: Residential, Commercial Main Blvd, Industrial, Agricultural & Heritage.",
-            "Strict land use compliance enforced across all Lahore Metropolitan sectors."
+            "Strict adherence to schedule of installment payments specified in allotment letter.",
+            "Surcharge penalty applied on late payment of property dues."
           ]
         },
         {
           num: "4",
-          category: "PERMITTED COMMERCIAL CORRIDORS",
+          category: "RESUMPTION & CANCELLATION POWERS (CLAUSE 12.2)",
           points: [
-            "Main Boulevard Gulberg, M.M. Alam Road, Ferozepur Spine & Johar Commercial.",
-            "Mandatory TEPA traffic impact assessment for major commercial developments."
+            "LDA DG empowered to cancel allotment and resume property on persistent default.",
+            "Appeals against cancellation to be submitted within 30 days to Appellate Authority."
+          ]
+        }
+      ];
+    } else if (filename.includes('private housing schemes') || filename.includes('housing schemes rules')) {
+      return [
+        {
+          num: "1",
+          category: "HOUSING SCHEME SANCTION RULES (RULE 6)",
+          points: [
+            "Mandatory preliminary planning permission and technical layout sanction from LDA.",
+            "Verification of unencumbered land ownership title covering entire scheme area."
+          ]
+        },
+        {
+          num: "2",
+          category: "OPEN SPACE & PUBLIC AMENITY RESERVATIONS",
+          points: [
+            "Minimum 20% land allocation for roads, 7% for green parks, and 2% for public amenities.",
+            "Reservation of 1% land for solid waste management and civic infrastructure."
+          ]
+        },
+        {
+          num: "3",
+          category: "ROAD WIDTHS & INFRASTRUCTURE STANDARDS",
+          points: [
+            "Minimum 30ft width for internal residential roads; 60ft for main entrance corridor.",
+            "Mandatory underground water supply, sewerage, and street lighting installation."
+          ]
+        },
+        {
+          num: "4",
+          category: "MORTGAGE OF PLOTS (SECURITY GUARANTEE)",
+          points: [
+            "Mandatory mortgaging of 20% saleable plots with LDA as security for infrastructure completion.",
+            "Release of mortgaged plots in phases upon LDA engineering completion certificate."
+          ]
+        }
+      ];
+    } else if (filename.includes('amendments in lda building & zoning regulations-2019') || filename.includes('725')) {
+      return [
+        {
+          num: "1",
+          category: "APARTMENT & COMMERCIAL HEIGHTS (CLAUSE 2.5 & 3.1)",
+          points: [
+            "Low Rise Apartment: Height Upto 48ft (G+3 Storeys), Ground Coverage 65%, Plot Size 10 Marla to 1 Kanal.",
+            "Medium Rise-I Apartment: Height Upto 90ft (G+6 Storeys), FAR 1:5, Plot Size 1 to 2 Kanals.",
+            "Low Rise Commercial: Height Upto 50ft (G+3 Storeys), Ground Coverage 65%."
+          ]
+        },
+        {
+          num: "2",
+          category: "PARKING STANDARDS & TEPA AGREEMENT (CLAUSE 3.11)",
+          points: [
+            "One Car Space per 1,200 Sq ft of covered area for Apartments, Offices, Commercial & Retail Stores.",
+            "Mandatory Parking Agreement with TEPA required. Parking allowed in Front Building Line for corner plots."
+          ]
+        },
+        {
+          num: "3",
+          category: "SETBACKS & CONVENIENCE SHOPS",
+          points: [
+            "Front Setback for Apartment Buildings: Minimum 20-feet front setback mandatory.",
+            "Convenience Shops: Max 350 Sft size for plots up to 2-Kanal (not located on front side)."
+          ]
+        },
+        {
+          num: "4",
+          category: "PLOT SUBDIVISION & ARCADES (CLAUSE 5.1.4 & 5.2.2)",
+          points: [
+            "Residential Plot Subdivision: Permissible for plots of 2 kanals (836.55 sqm) and above.",
+            "Arcade Width: 5 ft for plots up to 7-marla; 10 ft for plots above 7-marla."
+          ]
+        }
+      ];
+    } else if (filename.includes('landuse') || cat.includes('commercial')) {
+      return [
+        {
+          num: "1",
+          category: "PERMANENT COMMERCIAL CONVERSION (LIST A ROADS)",
+          points: [
+            "Permanent commercial status available on notified List A road corridors.",
+            "Conversion fee assessed at 20% of the prevailing commercial DC land valuation rate."
+          ]
+        },
+        {
+          num: "2",
+          category: "TEMPORARY COMMERCIAL RENEWAL (ANNUAL SURCHARGE)",
+          points: [
+            "Annual temporary commercialization renewal fee set at 5% of commercial DC rate.",
+            "Late surcharge of 10% per annum applied on overdue commercialization renewals."
+          ]
+        },
+        {
+          num: "3",
+          category: "LAND USE ZONING CLASSIFICATIONS",
+          points: [
+            "Metropolitan district divided into Residential, Commercial, Industrial, Agricultural, and Heritage zones.",
+            "Un-approved land use conversion strictly prohibited without LDA Board sanction."
+          ]
+        },
+        {
+          num: "4",
+          category: "PERMISSIBLE CORRIDORS & ENFORCEMENT",
+          points: [
+            "Declared commercial spines include Main Blvd Gulberg, MM Alam Rd, and Ferozepur Rd Corridor.",
+            "LDA enforcement wing empowered to seal unauthorized commercial premises."
           ]
         }
       ];
@@ -412,74 +518,39 @@ export function PortalPage({ officerUser, onOfficerLogout }) {
           ]
         }
       ];
-    } else if (filename.includes('master_plan') || cat.includes('master plan')) {
-      return [
-        {
-          num: "1",
-          category: "LAHORE MASTER PLAN 2050 ZONING",
-          points: [
-            "Metropolitan master plan zoning for all 19 municipal sectors of Lahore.",
-            "Urban growth boundary established to preserve surrounding agricultural land."
-          ]
-        },
-        {
-          num: "2",
-          category: "INDUSTRIAL CORRIDOR BELTS",
-          points: [
-            "Sundar & Multan Road designated for heavy & light industrial developments.",
-            "Mandatory Environmental Impact Assessment (EIA) for industrial units."
-          ]
-        },
-        {
-          num: "3",
-          category: "HERITAGE & SPECIAL CORRIDORS",
-          points: [
-            "Walled City & Mall Road Heritage Zone height strictly capped at 30ft max.",
-            "Preservation of architectural red-brick facade aesthetics."
-          ]
-        },
-        {
-          num: "4",
-          category: "GREEN BELTS & AGRICULTURAL PROTECTION",
-          points: [
-            "Ravi River basin and agricultural zone protected against illegal urbanization.",
-            "Minimum 15% open space green area mandatory for housing schemes."
-          ]
-        }
-      ];
     } else {
+      const cleanTitle = (doc?.title || doc?.filename || 'Statutory Gazette').replace(/\.[^/.]+$/, "");
       return [
         {
           num: "1",
-          category: "APARTMENT & COMMERCIAL HEIGHTS (CLAUSE 2.5 & 3.1)",
+          category: `ENACTMENT SCOPE & PROVISIONS (${doc?.aiMetadata?.issuingAuthority || 'LDA'})`,
           points: [
-            "Low Rise Apartment: Height Upto 48ft (G+3 Storeys), Ground Coverage 65%, Plot Size 10 Marla to 1 Kanal.",
-            "Medium Rise-I Apartment: Height Upto 90ft (G+6 Storeys), FAR 1:5, Plot Size 1 to 2 Kanals.",
-            "Low Rise Commercial: Height Upto 50ft (G+3 Storeys), Ground Coverage 65%."
+            `Statutory enactments codified in "${cleanTitle}".`,
+            `Enacted under Punjab Municipal Statutory Framework for ${doc?.aiMetadata?.jurisdiction || 'Lahore'}.`
           ]
         },
         {
           num: "2",
-          category: "PARKING STANDARDS & TEPA AGREEMENT (CLAUSE 3.11)",
+          category: "ZONING & LAND USE COMPLIANCE",
           points: [
-            "One Car Space per 1,200 Sq ft of covered area for Apartments, Offices, Commercial & Retail Stores.",
-            "Mandatory Parking Agreement with TEPA required. Parking allowed in Front Building Line for corner plots."
+            `Mandatory compliance with official ${doc?.aiMetadata?.category || 'Zoning'} bylaws.`,
+            `Approved by Development Authority Board for public enforcement.`
           ]
         },
         {
           num: "3",
-          category: "SETBACKS & CONVENIENCE SHOPS",
+          category: "VALUATION & TARIFF SCHEDULES",
           points: [
-            "Front Setback for Apartment Buildings: Minimum 20-feet front setback mandatory.",
-            "Convenience Shops: Max 350 Sft size for plots up to 2-Kanal (not located on front side)."
+            "Applicable fee rates, FAR allowances, or structural limits as specified in notification.",
+            "Prescribed sanction procedures enforced prior to project commencement."
           ]
         },
         {
           num: "4",
-          category: "PLOT SUBDIVISION & ARCADES (CLAUSE 5.1.4 & 5.2.2)",
+          category: "ENFORCEMENT & INSPECTION",
           points: [
-            "Residential Plot Subdivision: Permissible for plots of 2 kanals (836.55 sqm) and above.",
-            "Arcade Width: 5 ft for plots up to 7-marla; 10 ft for plots above 7-marla."
+            "Enforcement Directorate empowered to conduct site inspections and issue NOCs.",
+            "Violations subject to statutory penalties and resumption orders."
           ]
         }
       ];

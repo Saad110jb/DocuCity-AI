@@ -63,48 +63,83 @@ function isPointInPolygon(point, polygonCoordinates) {
   return inside;
 }
 
-// Helper: Detect neighborhood from GPS coordinates if outside pre-defined polygons
+// Comprehensive Lahore Reverse Geocoding & Place Name Resolution
 function getNeighborhoodFromCoords(lat, lng) {
-  if (lat >= 31.515 && lat <= 31.535 && lng >= 74.345 && lng <= 74.365) {
-    return { name: 'Gulberg III Commercial Area', authority: 'LDA', zone_type: 'Commercial', far: '1:8', max_height_ft: 120, setback_front_ft: 20, setback_side_ft: 10, commercialization_status: 'Permanent (List A) — 20% DC Rate', gazette_reference: 'LDA Gazette Notification 14/2023-C' };
+  // Gulberg Commercial High-Density
+  if (lat >= 31.510 && lat <= 31.538 && lng >= 74.340 && lng <= 74.368) {
+    return { name: 'Gulberg III Commercial High-Density Zone', authority: 'LDA', zone_type: 'Commercial', far: '1:8', max_height_ft: 120, setback_front_ft: 20, setback_side_ft: 10, commercialization_status: 'Permanent (List A) — 20% DC Rate', gazette_reference: 'LDA Gazette Notification 14/2023-C' };
   }
-  if (lat >= 31.460 && lat <= 31.485 && lng >= 74.270 && lng <= 74.300) {
+  // Johar Town Scheme
+  if (lat >= 31.455 && lat <= 31.488 && lng >= 74.265 && lng <= 74.305) {
     return { name: 'Johar Town Scheme (Phase 1 & 2)', authority: 'LDA', zone_type: 'Residential', far: '1:4', max_height_ft: 38, setback_front_ft: 10, setback_side_ft: 5, commercialization_status: 'Temporary Renewal', gazette_reference: 'LDA Gazette 08/2021-R' };
   }
-  if (lat >= 31.470 && lat <= 31.495 && lng >= 74.320 && lng <= 74.345) {
-    return { name: 'Model Town Residential Conservation Zone', authority: 'LDA', zone_type: 'Residential', far: '1:3.5', max_height_ft: 38, setback_front_ft: 15, setback_side_ft: 7, commercialization_status: 'Strictly Prohibited', gazette_reference: 'LDA Bylaw MT-R/2019' };
+  // Model Town Conservation
+  if (lat >= 31.468 && lat <= 31.498 && lng >= 74.318 && lng <= 74.348) {
+    return { name: 'Model Town Conservation Sector', authority: 'LDA', zone_type: 'Residential', far: '1:3.5', max_height_ft: 38, setback_front_ft: 15, setback_side_ft: 7, commercialization_status: 'Strictly Prohibited', gazette_reference: 'LDA Bylaw MT-R/2019' };
   }
-  if (lat >= 31.500 && lat <= 31.525 && lng >= 74.280 && lng <= 74.305) {
-    return { name: 'Allama Iqbal Town & Moon Market', authority: 'LDA', zone_type: 'Commercial', far: '1:5', max_height_ft: 60, setback_front_ft: 15, setback_side_ft: 8, commercialization_status: 'Permanent (List A) — 15% DC Rate', gazette_reference: 'LDA Gazette 22/2022-C' };
+  // Baghbanpura & Shalimar Town GT Road Sector
+  if (lat >= 31.560 && lat <= 31.605 && lng >= 74.400 && lng <= 74.520) {
+    return { name: 'Baghbanpura & Shalimar GT Road Corridor', authority: 'MCL & LDA', zone_type: 'Commercial / Residential Mixed', far: '1:5', max_height_ft: 60, setback_front_ft: 20, setback_side_ft: 10, commercialization_status: 'Permanent (List A) — 20% DC Rate', gazette_reference: 'LDA Building Regulations 2026' };
   }
-  if (lat >= 31.450 && lat <= 31.500 && lng >= 74.375 && lng <= 74.450) {
-    return { name: 'DHA Lahore (Phases 1–9)', authority: 'DHA Lahore', zone_type: 'Residential / Commercial', far: '1:4', max_height_ft: 48, setback_front_ft: 20, setback_side_ft: 10, commercialization_status: 'DHA Commercial Plots', gazette_reference: 'DHA Lahore Estate Act 2018' };
+  // Mughalpura & Garhi Shahu Sector
+  if (lat >= 31.520 && lat <= 31.560 && lng >= 74.360 && lng <= 74.410) {
+    return { name: 'Mughalpura & Garhi Shahu Commercial Spine', authority: 'MCL', zone_type: 'Commercial', far: '1:5', max_height_ft: 60, setback_front_ft: 15, setback_side_ft: 8, commercialization_status: 'Permanent (List A)', gazette_reference: 'MCL Commercial Corridor Order 2022' };
   }
-  if (lat >= 31.580 && lat <= 31.595 && lng >= 74.310 && lng <= 74.328) {
-    return { name: 'Walled City (Shahi Qila & Delhi Gate)', authority: 'Walled City Authority', zone_type: 'Heritage', far: '1:1.5', max_height_ft: 30, setback_front_ft: 15, setback_side_ft: 10, commercialization_status: 'Strict Conservation', gazette_reference: 'Punjab Heritage Act 2012' };
+  // Cantt & Cavalry Ground Sector
+  if (lat >= 31.505 && lat <= 31.545 && lng >= 74.370 && lng <= 74.420) {
+    return { name: 'Lahore Cantt & Cavalry Ground Commercial Area', authority: 'Military Lands & LDA', zone_type: 'Commercial / Mixed', far: '1:6', max_height_ft: 72, setback_front_ft: 20, setback_side_ft: 10, commercialization_status: 'Cantt Board Approved Commercial', gazette_reference: 'Cantonment Board Bylaws 2021' };
   }
-  if (lat >= 31.555 && lat <= 31.565 && lng >= 74.310 && lng <= 74.335) {
-    return { name: 'Mall Road Special Heritage Corridor', authority: 'WCLA & LDA', zone_type: 'Heritage', far: '1:2', max_height_ft: 30, setback_front_ft: 20, setback_side_ft: 12, commercialization_status: 'Preserved Facade Only', gazette_reference: 'LDA Heritage Corridor MR/2018' };
+  // DHA Lahore (Phases 1-9 & Raya)
+  if (lat >= 31.430 && lat <= 31.500 && lng >= 74.375 && lng <= 74.470) {
+    return { name: 'DHA Lahore (Phases 1–9 & Defence Raya)', authority: 'DHA Lahore', zone_type: 'Residential / Commercial', far: '1:4 Residential, 1:6 Commercial', max_height_ft: 48, setback_front_ft: 20, setback_side_ft: 10, commercialization_status: 'DHA Commercial Plots', gazette_reference: 'DHA Lahore Estate Act 2018' };
   }
-  if (lat >= 31.530 && lat <= 31.550 && lng >= 74.290 && lng <= 74.315) {
-    return { name: 'Samanabad & Chauburji Zone', authority: 'LDA', zone_type: 'Residential', far: '1:4', max_height_ft: 38, setback_front_ft: 10, setback_side_ft: 5, commercialization_status: '20% DC Rate on Main Multan Rd', gazette_reference: 'LDA Land Use Rules 2020' };
+  // Allama Iqbal Town & Moon Market
+  if (lat >= 31.495 && lat <= 31.528 && lng >= 74.275 && lng <= 74.308) {
+    return { name: 'Allama Iqbal Town & Moon Market Corridor', authority: 'LDA', zone_type: 'Commercial', far: '1:5', max_height_ft: 60, setback_front_ft: 15, setback_side_ft: 8, commercialization_status: 'Permanent (List A) — 15% DC Rate', gazette_reference: 'LDA Gazette 22/2022-C' };
   }
-  if (lat >= 31.530 && lat <= 31.545 && lng >= 74.325 && lng <= 74.345) {
-    return { name: 'Shadman & Jail Road Corridor', authority: 'LDA', zone_type: 'Commercial', far: '1:6', max_height_ft: 90, setback_front_ft: 20, setback_side_ft: 10, commercialization_status: 'Permanent (List A)', gazette_reference: 'LDA Land Use Rules 2020' };
+  // Walled City (Shahi Qila & Delhi Gate)
+  if (lat >= 31.578 && lat <= 31.598 && lng >= 74.308 && lng <= 74.330) {
+    return { name: 'Walled City (Shahi Qila & Delhi Gate Buffer)', authority: 'Walled City Authority', zone_type: 'Heritage', far: '1:1.5', max_height_ft: 30, setback_front_ft: 15, setback_side_ft: 10, commercialization_status: 'Strict Conservation', gazette_reference: 'Punjab Heritage Act 2012' };
   }
-  if (lat >= 31.490 && lat <= 31.510 && lng >= 74.310 && lng <= 74.335) {
+  // Mall Road Heritage Corridor
+  if (lat >= 31.552 && lat <= 31.568 && lng >= 74.308 && lng <= 74.338) {
+    return { name: 'Mall Road Heritage Conservation Corridor', authority: 'WCLA & LDA', zone_type: 'Heritage', far: '1:2', max_height_ft: 30, setback_front_ft: 20, setback_side_ft: 12, commercialization_status: 'Preserved Facade Only', gazette_reference: 'LDA Heritage Corridor MR/2018' };
+  }
+  // Samanabad & Chauburji Zone
+  if (lat >= 31.525 && lat <= 31.552 && lng >= 74.288 && lng <= 74.318) {
+    return { name: 'Samanabad & Chauburji Sector', authority: 'LDA', zone_type: 'Residential', far: '1:4', max_height_ft: 38, setback_front_ft: 10, setback_side_ft: 5, commercialization_status: '20% DC Rate on Main Multan Rd', gazette_reference: 'LDA Land Use Rules 2020' };
+  }
+  // Shadman & Jail Road Corridor
+  if (lat >= 31.525 && lat <= 31.548 && lng >= 74.322 && lng <= 74.348) {
+    return { name: 'Shadman & Jail Road Commercial Corridor', authority: 'LDA', zone_type: 'Commercial', far: '1:6', max_height_ft: 90, setback_front_ft: 20, setback_side_ft: 10, commercialization_status: 'Permanent (List A)', gazette_reference: 'LDA Land Use Rules 2020' };
+  }
+  // Garden Town & Faisal Town Scheme
+  if (lat >= 31.485 && lat <= 31.512 && lng >= 74.308 && lng <= 74.338) {
     return { name: 'Garden Town & Faisal Town Scheme', authority: 'LDA', zone_type: 'Residential', far: '1:4', max_height_ft: 45, setback_front_ft: 12, setback_side_ft: 6, commercialization_status: '20% DC Rate on Barkat Market Spine', gazette_reference: 'LDA Land Use Rules 2020' };
   }
-  if (lat >= 31.280 && lat <= 31.330 && lng >= 74.150 && lng <= 74.200) {
+  // Wapda Town & Valencia Sector
+  if (lat >= 31.405 && lat <= 31.455 && lng >= 74.248 && lng <= 74.298) {
+    return { name: 'Wapda Town & Valencia Housing Sector', authority: 'LDA', zone_type: 'Residential', far: '1:4', max_height_ft: 38, setback_front_ft: 10, setback_side_ft: 5, commercialization_status: 'Designated Commercial Centers Only', gazette_reference: 'LDA Building Regulations 2026' };
+  }
+  // Sundar Industrial Estate Belt
+  if (lat >= 31.280 && lat <= 31.335 && lng >= 74.148 && lng <= 74.205) {
     return { name: 'Sundar Industrial Estate Belt', authority: 'Urban Unit / PIEDMC', zone_type: 'Industrial', far: '1:3', max_height_ft: 60, setback_front_ft: 30, setback_side_ft: 15, commercialization_status: 'Industrial Use Only', gazette_reference: 'Punjab Industrial Act 2015' };
   }
-  if (lat >= 31.590 && lat <= 31.650 && lng >= 74.290 && lng <= 74.330) {
+  // Ravi Riverbed & Shahdara Green Belt
+  if (lat >= 31.588 && lat <= 31.655 && lng >= 74.288 && lng <= 74.335) {
     return { name: 'Ravi Riverbed & Shahdara Green Belt', authority: 'WASA & EPA', zone_type: 'Agricultural', far: 'N/A', max_height_ft: null, setback_front_ft: 50, setback_side_ft: 50, commercialization_status: 'Strictly Prohibited', gazette_reference: 'WASA Environmental Order 2019' };
   }
 
-  // General Lahore Location
+  // Fallback: Eastern / Western / Northern / Southern Lahore Administrative Sector
+  let sectorName = 'Lahore Metropolitan Sector';
+  if (lat > 31.55) {
+    sectorName = lng > 74.35 ? 'Baghbanpura / Eastern Lahore Sector' : 'Northern Lahore Urban Sector';
+  } else {
+    sectorName = lng > 74.35 ? 'Southern Lahore Sector (Cantt / DHA Extension)' : 'South-Western Lahore Housing Sector';
+  }
+
   return {
-    name: `Lahore Location (${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E)`,
+    name: `${sectorName} (${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E)`,
     authority: 'LDA (Lahore Development Authority)',
     zone_type: 'Residential Medium-Density',
     far: '1:4 (Standard LDA Residential)',
@@ -120,7 +155,7 @@ function getNeighborhoodFromCoords(lat, lng) {
 // ── Map Clicks & Pan Handler ──────────────────────────────────────────────────
 function MapEventsHandler({ onSelectMapLocation, geoJsonData }) {
   useMapEvents({
-    click(e) {
+    async click(e) {
       if (e.originalEvent && e.originalEvent._polygonClicked) {
         return; // Polygon click already handled
       }
@@ -154,10 +189,12 @@ function MapEventsHandler({ onSelectMapLocation, geoJsonData }) {
         return;
       }
 
-      // 3. Reverse detect area by coordinates
+      // 3. Resolve exact neighborhood profile & place name for coordinates
       const areaProfile = getNeighborhoodFromCoords(lat, lng);
+      
       const customLocationZone = {
         zone_name: areaProfile.name,
+        place_name: areaProfile.name,
         zone_code: `LOC-${lat.toFixed(3)}-${lng.toFixed(3)}`,
         zone_type: areaProfile.zone_type,
         authority: areaProfile.authority,
@@ -174,10 +211,35 @@ function MapEventsHandler({ onSelectMapLocation, geoJsonData }) {
       };
 
       onSelectMapLocation(customLocationZone, [lat, lng]);
+
+      // 4. Reverse Geocode via OpenStreetMap Nominatim API in background for ultra-precise local place names
+      try {
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`);
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          if (geoData && geoData.address) {
+            const addr = geoData.address;
+            const suburb = addr.suburb || fontClean(addr.neighbourhood) || addr.residential || addr.road || addr.subdistrict || addr.quarter;
+            if (suburb) {
+              const fullPlaceName = `${suburb}, ${areaProfile.authority} Jurisdiction (${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E)`;
+              const updatedZone = {
+                ...customLocationZone,
+                zone_name: fullPlaceName,
+                place_name: suburb
+              };
+              onSelectMapLocation(updatedZone, [lat, lng]);
+            }
+          }
+        }
+      } catch (err) {}
     }
   });
 
   return null;
+}
+
+function fontClean(str) {
+  return str ? str.trim() : '';
 }
 
 export function MapContainerComponent({
@@ -245,12 +307,12 @@ export function MapContainerComponent({
           <Marker position={clickedPin} icon={customSelectedIcon}>
             <Popup autoPan={false}>
               <div className="text-slate-900 text-xs font-bold leading-tight">
-                📍 {selectedZone?.zone_name || 'Selected Location'}<br />
+                📍 {selectedZone?.zone_name || selectedZone?.name || 'Selected Location'}<br />
                 <span className="font-normal text-slate-600 font-mono text-[10px]">
                   {clickedPin[0].toFixed(4)}° N, {clickedPin[1].toFixed(4)}° E
                 </span>
                 <div className="mt-1 text-[10px] text-emerald-700 font-semibold">
-                  RAG Chatbot locked to this area!
+                  RAG Chatbot grounded to this place!
                 </div>
               </div>
             </Popup>
@@ -274,7 +336,7 @@ export function MapContainerComponent({
           <div className="flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
             <span className="text-slate-400 font-medium">Selected Location:</span>
-            <span className="font-bold text-white max-w-[220px] md:max-w-xs truncate">
+            <span className="font-bold text-white max-w-[280px] md:max-w-md truncate">
               {selectedZone.zone_name || selectedZone.name}
             </span>
           </div>
@@ -349,13 +411,15 @@ export function MapContainerComponent({
           zone={selectedZone}
           conflicts={conflicts}
           onClose={() => setShowInspector(false)}
-          onQueryZone={(zone) =>
-            onAskRag &&
-            onAskRag(
-              `What are the specific building regulations, FAR limits, and setback rules for ${zone.zone_name || zone.name}?`,
-              zone.zone_code
-            )
-          }
+          onQueryZone={(zone) => {
+            const cleanPlaceName = zone.place_name || zone.zone_name?.replace(/\s*\([\d\.\s°NE,\-]+\)/g, '') || zone.name;
+            if (onAskRag) {
+              onAskRag(
+                `What are the specific building regulations, FAR limits, and setback rules for ${cleanPlaceName}?`,
+                zone.zone_code
+              );
+            }
+          }}
         />
       )}
     </div>

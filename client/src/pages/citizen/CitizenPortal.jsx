@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Book, Download, Search, Filter, FileText, Calendar, Building2,
-  MapPin, User, ShieldCheck, Lock, Eye, CheckCircle2, Sparkles
+  MapPin, User, ShieldCheck, Lock, Eye, CheckCircle2, Sparkles, RefreshCw
 } from 'lucide-react';
+import axios from 'axios';
 import { PdfCitationViewerModal } from '../../components/common/PdfCitationViewerModal';
 
 export function CitizenPortalPage({ user, onOpenMap }) {
@@ -12,22 +13,48 @@ export function CitizenPortalPage({ user, onOpenMap }) {
   const [selectedYear, setSelectedYear] = useState('All');
   const [activePdfModal, setActivePdfModal] = useState(null);
 
-  const gazettes = [
+  const defaultGazettes = [
     {
-      id: 1,
-      title: 'LDA Building and Zoning Regulations 2026',
+      id: "gaz-1",
+      title: '1.Amendments in LDA Building & Zoning Regulations-2019',
       authority: 'LDA',
       category: 'Building Bylaws',
-      year: '2026',
-      date: '2026-02-15',
-      size: '4.2 MB',
-      gazette_ref: 'Punjab Gazette Notification SO(H-II) 3-2/2026',
-      clause: 'Section 5.2 - Building Heights & FAR Limitations',
-      page: 14,
+      year: '2022',
+      date: '2022-10-28',
+      size: '0.8 MB',
+      gazette_ref: 'Office Order No. LDA/DC&I/725 Dated 28th October, 2022',
+      clause: 'Clause 2.5 (Low Rise Apartment Ground Coverage 65%) & Clause 3.1',
+      page: 1,
       snippet: 'High-density commercial corridors shall have an allowed FAR of 1:8 with maximum 120 ft height limit and mandatory 20 ft front setback.'
     },
     {
-      id: 2,
+      id: "gaz-2",
+      title: '2.LDA Landuse Rules_2020',
+      authority: 'LDA',
+      category: 'Zoning Bylaws',
+      year: '2020',
+      date: '2020-08-06',
+      size: '30.9 MB',
+      gazette_ref: 'The Punjab Gazette Registered No. L.-7532 Dated August 06, 2020',
+      clause: 'Section 4.2 & Commercialization List A Corridors',
+      page: 14,
+      snippet: 'Permanent commercialization on declared List A road corridors is assessed at 20% of commercial DC rate.'
+    },
+    {
+      id: "gaz-3",
+      title: '09-02-2026-amended-building-regulations-2019-with-amendment',
+      authority: 'LDA',
+      category: 'Building Bylaws',
+      year: '2026',
+      date: '2026-02-09',
+      size: '2.0 MB',
+      gazette_ref: 'LDA Master Building Regulations 2026 Volume',
+      clause: 'Chapter 4 - Vertical Density, FAR Caps & Heights',
+      page: 113,
+      snippet: 'Full 113-page master building regulations with structured tabular bylaws for heights, setbacks, and parking.'
+    },
+    {
+      id: "gaz-4",
       title: 'Lahore Master Plan 2050 — Metropolitan Land Use',
       authority: 'Urban Unit',
       category: 'Master Plans',
@@ -40,7 +67,7 @@ export function CitizenPortalPage({ user, onOpenMap }) {
       snippet: 'Agricultural reserves along the Ravi basin are strictly preserved from hazardous industrial development.'
     },
     {
-      id: 3,
+      id: "gaz-5",
       title: 'WASA Water Tariff and Sewerage Protection Regulations',
       authority: 'WASA',
       category: 'Water Tariffs',
@@ -53,7 +80,7 @@ export function CitizenPortalPage({ user, onOpenMap }) {
       snippet: 'Mandatory 15-meter buffer for trunk sewerage alignments and Rs. 15,000/cusec commercial groundwater extraction fee.'
     },
     {
-      id: 4,
+      id: "gaz-6",
       title: 'Punjab Environmental Protection Guidelines for Commercial Zones',
       authority: 'EPA',
       category: 'Environmental Reports',
@@ -66,20 +93,7 @@ export function CitizenPortalPage({ user, onOpenMap }) {
       snippet: 'All industrial units in Sundar and Multan Road must install operational Effluent Treatment Plants (ETP).'
     },
     {
-      id: 5,
-      title: 'Johar Town Traffic & Road Setback Policy (List A Roads)',
-      authority: 'MCL',
-      category: 'Commercialization Rules',
-      year: '2026',
-      date: '2026-03-01',
-      size: '1.5 MB',
-      gazette_ref: 'MCL Road Corridor Order FRD/2021-2026',
-      clause: 'Section 4.1 - 20% DC Rate Commercialization Conversion',
-      page: 7,
-      snippet: 'Permanent commercialization on declared List A road corridors is assessed at 20% of commercial DC rate.'
-    },
-    {
-      id: 6,
+      id: "gaz-7",
       title: 'Walled City of Lahore Heritage Conservation Bylaws',
       authority: 'Walled City Authority',
       category: 'Heritage Conservation',
@@ -90,29 +104,54 @@ export function CitizenPortalPage({ user, onOpenMap }) {
       clause: 'Clause 6 - 30ft Strict Max Height Cap & Facade Preservation',
       page: 3,
       snippet: 'Strict 30 ft height cap on all new constructions within Shahi Qila, Delhi Gate, and Mall Road buffer corridors.'
-    },
-    {
-      id: 7,
-      title: 'DHA Lahore Estate Management & Building Bylaws 2018-2025',
-      authority: 'DHA Lahore',
-      category: 'Building Bylaws',
-      year: '2025',
-      date: '2025-04-18',
-      size: '6.1 MB',
-      gazette_ref: 'DHA Lahore Estate Act — General Order 2018/2025',
-      clause: 'Chapter 2 - Residential Villas & Defence Raya Height Standards',
-      page: 22,
-      snippet: 'Residential plots permitted up to 48 ft height with 20 ft mandatory front setback.'
     }
   ];
+
+  const [gazettes, setGazettes] = useState(defaultGazettes);
+
+  // Fetch Live MongoDB Staged/Enacted Documents on Mount
+  useEffect(() => {
+    async function loadMongoDocs() {
+      try {
+        const res = await axios.get('http://localhost:5000/api/documents/ingestion/staged');
+        if (res.data && res.data.documents && res.data.documents.length > 0) {
+          const liveList = res.data.documents.map(d => ({
+            id: d.documentId,
+            title: d.title || d.filename,
+            authority: d.aiMetadata ? d.aiMetadata.issuingAuthority : 'LDA',
+            category: d.aiMetadata ? d.aiMetadata.category : 'Building Bylaws',
+            year: d.aiMetadata && d.aiMetadata.publicationDate ? new Date(d.aiMetadata.publicationDate).getFullYear().toString() : '2026',
+            date: d.aiMetadata && d.aiMetadata.publicationDate ? new Date(d.aiMetadata.publicationDate).toISOString().split('T')[0] : '2026-08-25',
+            size: d.fileSize || '2.4 MB',
+            gazette_ref: `${d.aiMetadata ? d.aiMetadata.issuingAuthority : 'LDA'} Enacted Statutory Notification`,
+            clause: `Parsed ${d.totalPages || 2} Pages · Scope: ${d.aiMetadata ? d.aiMetadata.jurisdiction : 'Lahore'}`,
+            page: 1,
+            snippet: `Statutory municipal gazette record for ${d.title}. Parsed ${d.totalPages || 2} pages into MongoDB vector index.`
+          }));
+
+          // Merge live mongo documents with defaults
+          const merged = [...liveList];
+          defaultGazettes.forEach(def => {
+            if (!merged.some(m => m.title.toLowerCase() === def.title.toLowerCase())) {
+              merged.push(def);
+            }
+          });
+          setGazettes(merged);
+        }
+      } catch (e) {
+        console.warn('Using standard public gazette library dataset');
+      }
+    }
+    loadMongoDocs();
+  }, []);
 
   const filteredGazettes = gazettes.filter(g => {
     const matchesSearch =
       g.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       g.gazette_ref.toLowerCase().includes(searchTerm.toLowerCase()) ||
       g.clause.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesAuth = selectedAuthority === 'All' || g.authority === selectedAuthority;
-    const matchesCat = selectedCategory === 'All' || g.category === selectedCategory;
+    const matchesAuth = selectedAuthority === 'All' || g.authority.toUpperCase().includes(selectedAuthority.toUpperCase());
+    const matchesCat = selectedCategory === 'All' || g.category.toLowerCase().includes(selectedCategory.toLowerCase());
     const matchesYear = selectedYear === 'All' || g.year === selectedYear;
     return matchesSearch && matchesAuth && matchesCat && matchesYear;
   });
@@ -180,7 +219,7 @@ This is an authentic, legally grounded record retrieved from the DocuCity Lahore
             </button>
           </div>
 
-          {/* ── 5. Access Boundaries & Public Data Protection Banner ─────── */}
+          {/* ── Access Boundaries & Public Data Protection Banner ─────── */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-3">
             <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
               <div className="flex items-center space-x-2">
@@ -290,7 +329,7 @@ This is an authentic, legally grounded record retrieved from the DocuCity Lahore
                   <span>Public Municipal Gazette & Policy Library</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Curated repository of approved government gazettes, building bylaws, and master plans.
+                  Curated, searchable repository of approved government gazettes, building bylaws, and master plans.
                 </p>
               </div>
               <span className="text-xs text-slate-400 font-mono bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
@@ -343,6 +382,7 @@ This is an authentic, legally grounded record retrieved from the DocuCity Lahore
                   <option value="Environmental Reports">Environmental Reports</option>
                   <option value="Commercialization Rules">Commercialization Rules</option>
                   <option value="Heritage Conservation">Heritage Conservation</option>
+                  <option value="Zoning Bylaws">Zoning Bylaws</option>
                 </select>
               </div>
 
@@ -357,6 +397,7 @@ This is an authentic, legally grounded record retrieved from the DocuCity Lahore
                   <option value="2026">2026 Enactments</option>
                   <option value="2025">2025 Enactments</option>
                   <option value="2023">2023 Enactments</option>
+                  <option value="2022">2022 Enactments</option>
                   <option value="2020">2020 Enactments</option>
                   <option value="2018">2018 Enactments</option>
                 </select>
@@ -413,7 +454,7 @@ This is an authentic, legally grounded record retrieved from the DocuCity Lahore
                         gazette_ref: g.gazette_ref,
                         snippet: g.snippet
                       })}
-                      className="bg-slate-900 hover:bg-emerald-600 text-slate-200 hover:text-white px-3.5 py-2 rounded-xl font-bold transition-all border border-slate-800 hover:border-emerald-500 flex items-center space-x-1.5 shadow-sm text-xs"
+                      className="bg-slate-900 hover:bg-emerald-600 text-slate-200 hover:text-white px-3.5 py-2 rounded-xl font-bold transition-all border border-slate-800 hover:border-emerald-500 flex items-center space-x-1.5 shadow-sm text-xs cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Verify / Read PDF</span>
@@ -421,7 +462,7 @@ This is an authentic, legally grounded record retrieved from the DocuCity Lahore
 
                     <button 
                       onClick={() => handleDownload(g)}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl font-bold transition-all shadow-md shadow-emerald-600/30 flex items-center space-x-1.5 text-xs"
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl font-bold transition-all shadow-md shadow-emerald-600/30 flex items-center space-x-1.5 text-xs cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>Download</span>
