@@ -12,6 +12,7 @@ async function getOcrDocumentDetails(req, res) {
     try {
       let ingestedDoc = await IngestionDocument.findOne({ documentId: docId });
 
+      const targetPages = ingestedDoc && ingestedDoc.totalPages ? ingestedDoc.totalPages : null;
       const docTitle = ingestedDoc ? ingestedDoc.title : docId.replace(/_/g, ' ');
       const docFilename = ingestedDoc ? ingestedDoc.filename : `${docId}.pdf`;
       const authority = ingestedDoc ? ingestedDoc.aiMetadata.issuingAuthority : 'LDA';
@@ -22,24 +23,8 @@ async function getOcrDocumentDetails(req, res) {
         ? path.join(__dirname, '../../', ingestedDoc.fileUrl)
         : path.join(__dirname, '../../uploads', docFilename);
 
-      const { totalPages, textChunks } = parseRealPdfFile(filePath, docFilename, authority, jurisdiction, category);
+      const { totalPages, textChunks, tabularBylaws, summary_highlights } = parseRealPdfFile(filePath, docFilename, authority, jurisdiction, category, targetPages);
 
-      // Check existing document
-      let existingDoc = await OcrDocument.findOne({ documentId: docId });
-      
-      // If document exists but has repeated legacy text, update it with unique non-repeating chunks!
-      let needsRefresh = false;
-      if (existingDoc && existingDoc.textChunks && existingDoc.textChunks.length > 1) {
-        if (existingDoc.textChunks[0].englishText === existingDoc.textChunks[1].englishText) {
-          needsRefresh = true;
-        }
-      }
-
-      if (existingDoc && !needsRefresh) {
-        return res.json(existingDoc);
-      }
-
-      // Save unique non-repeating chunks into MongoDB ocrdocuments
       let doc = await OcrDocument.findOneAndUpdate(
         { documentId: docId },
         {
@@ -48,41 +33,45 @@ async function getOcrDocumentDetails(req, res) {
             totalPages: totalPages,
             currentPage: 1,
             textChunks: textChunks,
-            tabularBylaws: [
-              { id: "tbl-1", zone: jurisdiction, minPlotSize: "1 Kanal", maxFAR: "1:8", maxHeight: "120 ft", frontSetback: "20 ft", sideSetback: "10 ft", commercialFeeTier: "Tier 1 (20% DC Rate)" },
-              { id: "tbl-2", zone: `${jurisdiction} Temporary`, minPlotSize: "10 Marla", maxFAR: "1:4", maxHeight: "45 ft", frontSetback: "10 ft", sideSetback: "5 ft", commercialFeeTier: "Tier 2 (5% DC Rate)" }
-            ],
+            summary_highlights: summary_highlights,
+            tabularBylaws: tabularBylaws,
             namedEntities: [
-              { id: "ent-1", label: "AUTHORITY", text: authority, confidence: 0.99 },
-              { id: "ent-2", label: "JURISDICTION", text: jurisdiction, confidence: 0.98 },
-              { id: "ent-3", label: "CATEGORY", text: category, confidence: 0.97 },
-              { id: "ent-4", label: "DOCUMENT_TITLE", text: docTitle, confidence: 0.99 }
+              { id: "ent-1", label: "TOTAL_PAGES", text: `${totalPages} Pages`, confidence: 0.99 },
+              { id: "ent-2", label: "DOCUMENT_TITLE", text: docTitle, confidence: 0.99 },
+              { id: "ent-3", label: "AUTHORITY", text: authority, confidence: 0.99 },
+              { id: "ent-4", label: "JURISDICTION", text: jurisdiction, confidence: 0.98 }
             ],
             redactedPii: [
-              { id: "pii-1", piiCategory: "CNIC", original: "[CNIC REDACTED]", redacted: "[CNIC REDACTED]", verified: true }
+              { id: "pii-1", piiCategory: "GAZETTE_SEAL", original: `${authority} Official Seal`, redacted: "[VERIFIED OFFICIAL SEAL]", verified: true }
             ]
           }
         },
         { new: true, upsert: true }
       );
 
-      console.log(`[OcrController] Updated MongoDB ocrdocuments for '${docFilename}' with unique non-repeating chunks (${totalPages} pages)!`);
+      // Keep ingestiondocuments totalPages synchronized in MongoDB
+      if (ingestedDoc) {
+        await IngestionDocument.updateOne({ documentId: docId }, { $set: { totalPages: totalPages } });
+      }
+
+      console.log(`[OcrController] Loaded OCR record & tabular bylaws for '${docFilename}' (${totalPages} Pages)!`);
       return res.json(doc);
     } catch (e) {
       console.warn('[OcrController] MongoDB query warning:', e.message);
     }
   }
 
-  const { totalPages, textChunks } = parseRealPdfFile("", "LDA_Gazette.pdf", "LDA", "Lahore", "Zoning Bylaws");
-  return res.json({ ...defaultOcrData, documentId: docId, totalPages, textChunks });
+  const { totalPages, textChunks, tabularBylaws, summary_highlights } = parseRealPdfFile("", "LDA_Gazette.pdf", "LDA", "Lahore", "Zoning Bylaws", 2);
+  return res.json({ ...defaultOcrData, documentId: docId, totalPages, textChunks, tabularBylaws, summary_highlights });
 }
 
 async function saveOcrCorrections(req, res) {
-  const { documentId, textChunks, tabularBylaws, namedEntities, redactedPii } = req.body;
+  const { documentId, textChunks, tabularBylaws, namedEntities, redactedPii, summary_highlights } = req.body;
   const docId = documentId || "doc-ingest-001";
 
   const updatePayload = { updatedAt: new Date() };
   if (textChunks) updatePayload.textChunks = textChunks;
+  if (summary_highlights) updatePayload.summary_highlights = summary_highlights;
   if (tabularBylaws) updatePayload.tabularBylaws = tabularBylaws;
   if (namedEntities) updatePayload.namedEntities = namedEntities;
   if (redactedPii) updatePayload.redactedPii = redactedPii;

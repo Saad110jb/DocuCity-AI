@@ -18,9 +18,13 @@ const {
   generateZoningCertificate,
   exportComplianceAuditTrail
 } = require('../controllers/exportController');
+const { handleBilingualRagQuery } = require('../controllers/ragController');
 
 // Upload
 router.post('/upload', upload.single('file'), handleFileUpload);
+
+// Conversational Policy Search (Bilingual RAG Assistant with Gemini API)
+router.post('/rag/chat', handleBilingualRagQuery);
 
 // Municipal Officer Ingestion & Smart Staging Endpoints
 router.get('/ingestion/list', getIngestionDocuments);

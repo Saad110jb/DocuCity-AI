@@ -6,6 +6,8 @@ const ingestionDocumentSchema = new mongoose.Schema({
   filename: { type: String, required: true },
   fileType: { type: String, default: 'PDF' },
   fileSize: { type: String, default: '2.4 MB' },
+  fileUrl: { type: String },
+  totalPages: { type: Number, default: 2 },
   uploadTimestamp: { type: Date, default: Date.now },
   uploader: {
     userId: { type: String },
@@ -57,92 +59,97 @@ try {
 
 const initialIngestionDocs = [
   {
-    documentId: "doc-ingest-001",
-    title: "LDA High-Density Commercialization Bylaws 2026 Amendment",
-    filename: "LDA_Commercial_Bylaws_2026_Draft.pdf",
+    documentId: "doc-ingest-1787770663300",
+    title: "2.LDA Landuse Rules 2020",
+    filename: "2.LDA Landuse Rules_2020.pdf",
     fileType: "PDF",
-    fileSize: "4.2 MB",
-    uploadTimestamp: new Date("2026-08-25T10:15:00Z"),
-    uploader: { name: "Officer Tariq Mahmood", department: "LDA Commercial Verification Wing" },
+    fileSize: "30.9 MB",
+    totalPages: 206,
+    uploadTimestamp: new Date("2026-08-26T18:57:43.300Z"),
+    uploader: { name: "Municipal Officer", department: "LDA" },
     aiMetadata: {
       issuingAuthority: "LDA",
-      jurisdiction: "Gulberg Commercial Zone (Main Blvd & M.M. Alam)",
+      jurisdiction: "All Lahore Metropolitan District (City-Wide)",
+      sector: "Lahore Zone",
+      publicationDate: new Date("2026-08-26"),
+      category: "Zoning Bylaws",
+      confidenceScore: 0.96
+    },
+    stagingStatus: "Formal Gazette Enacted (Published)",
+    targetCollection: "docucity_public_bylaws",
+    conflictDetection: {
+      hasConflict: false,
+      conflictSummary: "No overlapping legacy bylaws found in MongoDB index.",
+      policyResolution: "Active"
+    },
+    queueProgress: { status: "Completed", percentage: 100, currentStage: "Parsed 206 pages & isolated to LDA Scope" }
+  },
+  {
+    documentId: "doc-ingest-001",
+    title: "1.Amendments in LDA Building & Zoning Regulations-2019",
+    filename: "1.Amendments in LDA Building & Zoning Regulations-2019.pdf",
+    fileType: "PDF",
+    fileSize: "0.8 MB",
+    totalPages: 2,
+    uploadTimestamp: new Date("2026-08-25T10:15:00Z"),
+    uploader: { name: "Municipal Officer", department: "LDA" },
+    aiMetadata: {
+      issuingAuthority: "LDA",
+      jurisdiction: "All Lahore Metropolitan District (City-Wide)",
       sector: "Zone 1",
       publicationDate: new Date("2026-08-25"),
-      category: "Commercialization Rules",
-      confidenceScore: 0.96
+      category: "Zoning Bylaws",
+      confidenceScore: 0.99
     },
     stagingStatus: "Internal Draft (Staged)",
     targetCollection: "docucity_internal_officer_gazette",
     conflictDetection: {
-      hasConflict: true,
-      conflictingDocumentId: "doc-legacy-1998",
-      conflictingClause: "Clause 4.2 - High Density FAR (1998 Gazette)",
-      conflictSummary: "Increases allowed FAR from 1:4 to 1:8 on Main Boulevard plots.",
-      policyResolution: "Partially Amended"
-    },
-    queueProgress: { status: "Completed", percentage: 100, currentStage: "Indexed in MongoDB Vector Search" }
-  },
-  {
-    documentId: "doc-ingest-002",
-    title: "WASA Johar Town Drainage Tariffs & Sewerage Circular",
-    filename: "WASA_Tariff_Circular_2026.pdf",
-    fileType: "PDF",
-    fileSize: "1.8 MB",
-    uploadTimestamp: new Date("2026-08-24T14:20:00Z"),
-    uploader: { name: "Officer Tariq Mahmood", department: "WASA Infrastructure" },
-    aiMetadata: {
-      issuingAuthority: "WASA",
-      jurisdiction: "Johar Town (Phase 1 & 2, Blocks A-R)",
-      sector: "Ravi & Johar Drainage Sector",
-      publicationDate: new Date("2026-08-24"),
-      category: "Water Tariffs",
-      confidenceScore: 0.92
-    },
-    stagingStatus: "Formal Gazette Enacted (Published)",
-    targetCollection: "docucity_public_bylaws",
-    conflictDetection: {
       hasConflict: false,
-      conflictSummary: "No policy overlap detected with historical gazette notifications.",
+      conflictSummary: "Office Order No. LDA/DC&I/725 Dated 28.10.2022.",
       policyResolution: "Active"
     },
-    queueProgress: { status: "Completed", percentage: 100, currentStage: "Public Vector Collection Active" }
+    queueProgress: { status: "Completed", percentage: 100, currentStage: "Parsed 2 pages & isolated to LDA Scope" }
   },
   {
-    documentId: "doc-ingest-003",
-    title: "All Lahore Master Plan 2050 Zoning Gazette Notification",
-    filename: "Lahore_Master_Plan_2050_Gazette.pdf",
+    documentId: "doc-ingest-113",
+    title: "09-02-2026-amended-building-regulations-2019-with-amendment",
+    filename: "09-02-2026-amended-building-regulations-2019-with-amendment.pdf",
     fileType: "PDF",
-    fileSize: "12.5 MB",
-    uploadTimestamp: new Date("2026-08-20T09:00:00Z"),
-    uploader: { name: "Super Admin", department: "Punjab Urban Development Authority" },
+    fileSize: "2.0 MB",
+    totalPages: 113,
+    uploadTimestamp: new Date("2026-08-26T12:00:00Z"),
+    uploader: { name: "Municipal Officer", department: "LDA" },
     aiMetadata: {
       issuingAuthority: "LDA",
       jurisdiction: "All Lahore Metropolitan District (City-Wide)",
-      sector: "All Municipal Zones",
-      publicationDate: new Date("2026-08-20"),
-      category: "Master Plan 2050",
+      sector: "Zone 1",
+      publicationDate: new Date("2026-08-26"),
+      category: "Zoning Bylaws",
       confidenceScore: 0.98
     },
-    stagingStatus: "Formal Gazette Enacted (Published)",
-    targetCollection: "docucity_public_bylaws",
+    stagingStatus: "Internal Draft (Staged)",
+    targetCollection: "docucity_internal_officer_gazette",
     conflictDetection: {
       hasConflict: false,
-      conflictSummary: "City-wide master plan Gazette notification.",
+      conflictSummary: "Full 113-page master building regulations.",
       policyResolution: "Active"
     },
-    queueProgress: { status: "Completed", percentage: 100, currentStage: "Public Vector Collection Active" }
+    queueProgress: { status: "Completed", percentage: 100, currentStage: "Parsed 113 pages & isolated to LDA Scope" }
   }
 ];
 
 async function seedInitialIngestionDocuments() {
   if (mongoose.connection.readyState === 1) {
     try {
-      const count = await IngestionDocument.countDocuments();
-      if (count === 0) {
-        await IngestionDocument.insertMany(initialIngestionDocs);
-        console.log('[IngestionDocument] Seeded initial municipal officer staging documents into MongoDB ingestiondocuments collection.');
+      // Sync or insert initial documents with exact totalPages
+      for (const doc of initialIngestionDocs) {
+        await IngestionDocument.findOneAndUpdate(
+          { documentId: doc.documentId },
+          { $set: doc },
+          { upsert: true }
+        );
       }
+      console.log('[IngestionDocument] Synced initial municipal officer documents into MongoDB with exact totalPages!');
     } catch (e) {
       console.warn('[IngestionDocument] Seed warning:', e.message);
     }

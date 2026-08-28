@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Eye, FileText, CheckCircle2, AlertTriangle, Save, RefreshCw, Sparkles,
-  Table, Tag, ShieldCheck, ArrowLeft, Plus, Trash2, Edit3, Type, Layers
+  Table, Tag, ShieldCheck, ArrowLeft, Plus, Trash2, Edit3, Type, Layers, ChevronDown
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -34,9 +34,13 @@ export function OcrCorrectionStudioPage({ documentId = 'doc-ingest-001', onBack 
   });
 
   const [activeChunkId, setActiveChunkId] = useState('chk-p1');
+  const [activePageNum, setActivePageNum] = useState(1);
   const [activeRightTab, setActiveRightTab] = useState('bilingual'); // 'bilingual' | 'table' | 'entities' | 'pii'
   const [saving, setSaving] = useState(false);
   const [saveNotice, setSaveNotice] = useState('');
+
+  const editorRefs = useRef({});
+  const leftCanvasRef = useRef(null);
 
   // Load document-specific OCR details from backend
   useEffect(() => {
@@ -55,6 +59,30 @@ export function OcrCorrectionStudioPage({ documentId = 'doc-ingest-001', onBack 
     }
     loadOcrDetails();
   }, [documentId]);
+
+  // Handle Left Panel Scroll to update Active Page Number Indicator dynamically
+  const handleLeftPanelScroll = (e) => {
+    const scrollTop = e.target.scrollTop;
+    const itemHeight = 120; // approximate chunk box height
+    const idx = Math.min(
+      Math.floor(scrollTop / itemHeight),
+      (ocrData.textChunks ? ocrData.textChunks.length - 1 : 0)
+    );
+
+    if (ocrData.textChunks && ocrData.textChunks[idx]) {
+      const chunkId = ocrData.textChunks[idx].id || '';
+      const match = chunkId.match(/chk-p(\d+)/);
+      if (match && match[1]) {
+        const page = parseInt(match[1], 10);
+        if (page > 0 && page <= (ocrData.totalPages || 206)) {
+          setActivePageNum(page);
+        }
+      } else {
+        const calcPage = Math.min(ocrData.totalPages || 206, idx + 1);
+        setActivePageNum(calcPage);
+      }
+    }
+  };
 
   // Save OCR & Entity Corrections directly to MongoDB
   const handleSaveAllCorrections = async () => {
@@ -113,6 +141,17 @@ export function OcrCorrectionStudioPage({ documentId = 'doc-ingest-001', onBack 
     }));
   };
 
+  // Select & Scroll to Chunk in Editor
+  const handleSelectChunk = (chunkId, pageNum) => {
+    setActiveChunkId(chunkId);
+    setActivePageNum(pageNum || activePageNum);
+    setActiveRightTab('bilingual');
+
+    if (editorRefs.current[chunkId]) {
+      editorRefs.current[chunkId].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans overflow-hidden">
       {/* Header Bar */}
@@ -158,63 +197,77 @@ export function OcrCorrectionStudioPage({ documentId = 'doc-ingest-001', onBack 
       </header>
 
       {/* Main Split-Screen Layout */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden max-h-[calc(100vh-4rem)]">
         {/* LEFT PANEL (6 Cols): Dynamic Side-by-Side Visual Review - Bounding Boxes */}
-        <div className="lg:col-span-6 bg-slate-900 border-r border-slate-800 p-6 flex flex-col overflow-y-auto space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="lg:col-span-6 bg-slate-900 border-r border-slate-800 p-6 flex flex-col overflow-hidden space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
             <div className="flex items-center space-x-2">
               <Eye className="w-4 h-4 text-purple-400" />
               <h2 className="text-xs font-bold text-white uppercase tracking-wider">Side-by-Side Visual Scanned Gazette Review</h2>
             </div>
-            <span className="text-[10px] bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-400 font-mono">
-              Page {ocrData.currentPage} of {ocrData.totalPages}
+            <span className="text-[10px] bg-purple-950 text-purple-300 border border-purple-800 px-3 py-1 rounded-lg font-mono font-bold">
+              Page {activePageNum} of {ocrData.totalPages || 206} (Scroll Down)
             </span>
           </div>
 
-          {/* Interactive Dynamic Bounding Box Canvas Container */}
-          <div className="relative bg-slate-950 border border-slate-800 rounded-2xl min-h-[480px] p-6 shadow-inner flex flex-col justify-between overflow-y-auto space-y-4">
+          {/* Interactive Dynamic Bounding Box Canvas Container with Infinite Scroll Down */}
+          <div
+            ref={leftCanvasRef}
+            onScroll={handleLeftPanelScroll}
+            className="relative bg-slate-950 border border-slate-800 rounded-2xl flex-1 p-6 shadow-inner overflow-y-auto space-y-4 max-h-[calc(100vh-10rem)] scrollbar-thin scrollbar-thumb-purple-600/40"
+          >
             <div className="space-y-4">
-              {ocrData.textChunks && ocrData.textChunks.slice(0, 10).map((chunk, idx) => (
-                <div
-                  key={chunk.id || idx}
-                  onClick={() => {
-                    setActiveChunkId(chunk.id);
-                    setActiveRightTab('bilingual');
-                  }}
-                  className={`p-4 rounded-xl border-2 transition-all cursor-pointer relative ${
-                    activeChunkId === chunk.id
-                      ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
-                      : 'border-slate-800 hover:border-slate-700 bg-slate-900/60'
-                  }`}
-                >
-                  <span className="absolute -top-3 left-3 bg-purple-600 text-white text-[9px] font-mono px-2 py-0.5 rounded font-bold">
-                    BBOX #{idx + 1} (Conf: {Math.round((chunk.confidence || 0.96) * 100)}%)
-                  </span>
+              {ocrData.textChunks && ocrData.textChunks.map((chunk, idx) => {
+                const chunkPageMatch = (chunk.id || '').match(/chk-p(\d+)/);
+                const chunkPage = chunkPageMatch ? parseInt(chunkPageMatch[1], 10) : (idx + 1);
 
-                  <p className="text-xs text-slate-200 leading-relaxed pt-1 font-mono">
-                    {chunk.englishText}
-                  </p>
+                return (
+                  <div
+                    key={chunk.id || idx}
+                    onClick={() => handleSelectChunk(chunk.id, chunkPage)}
+                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer relative ${
+                      activeChunkId === chunk.id
+                        ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20 ring-1 ring-purple-500/50'
+                        : 'border-slate-800 hover:border-slate-700 bg-slate-900/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between -top-3 left-3 right-3 absolute">
+                      <span className="bg-purple-600 text-white text-[9px] font-mono px-2 py-0.5 rounded font-bold shadow-md">
+                        BBOX #{idx + 1} (Conf: {Math.round((chunk.confidence || 0.96) * 100)}%)
+                      </span>
+                      <span className="bg-slate-900 border border-slate-700 text-purple-300 text-[9px] font-mono px-2 py-0.5 rounded">
+                        Page {chunkPage} of {ocrData.totalPages || 206}
+                      </span>
+                    </div>
 
-                  {chunk.urduText && (
-                    <p className="text-xs text-purple-300 font-mono mt-2 text-right leading-relaxed border-t border-slate-800/60 pt-1" dir="rtl">
-                      {chunk.urduText}
+                    <p className="text-xs text-slate-200 leading-relaxed pt-2 font-mono">
+                      {chunk.englishText}
                     </p>
-                  )}
-                </div>
-              ))}
+
+                    {chunk.urduText && (
+                      <p className="text-xs text-purple-300 font-mono mt-2 text-right leading-relaxed border-t border-slate-800/60 pt-1" dir="rtl">
+                        {chunk.urduText}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
-              <span>Click any bounding box above to inspect & edit OCR text on the right panel.</span>
+              <span className="flex items-center space-x-1">
+                <ChevronDown className="w-3.5 h-3.5 text-purple-400 animate-bounce" />
+                <span>Scroll down to review all {ocrData.totalPages || 206} pages. Click any chunk to edit.</span>
+              </span>
               <span className="text-purple-400 font-mono font-bold">PaddleOCR Active</span>
             </div>
           </div>
         </div>
 
         {/* RIGHT PANEL (6 Cols): Verification Tools, Urdu Palette, Tabular Bylaw Editor, Entity Inspector & PII Review */}
-        <div className="lg:col-span-6 bg-slate-950 p-6 flex flex-col overflow-y-auto space-y-6">
+        <div className="lg:col-span-6 bg-slate-950 p-6 flex flex-col overflow-y-auto space-y-6 max-h-[calc(100vh-4rem)]">
           {/* Tool Selector Tabs */}
-          <div className="flex p-1 bg-slate-900 rounded-2xl border border-slate-800 space-x-1 text-xs font-bold">
+          <div className="flex p-1 bg-slate-900 rounded-2xl border border-slate-800 space-x-1 text-xs font-bold shrink-0">
             <button
               onClick={() => setActiveRightTab('bilingual')}
               className={`flex-1 py-2 rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
@@ -258,16 +311,20 @@ export function OcrCorrectionStudioPage({ documentId = 'doc-ingest-001', onBack 
 
           {/* TAB 1: Bilingual OCR Verification & Urdu Nastaliq Correction Palette */}
           {activeRightTab === 'bilingual' && (
-            <div className="space-y-6">
-              {ocrData.textChunks && ocrData.textChunks.slice(0, 10).map((chunk) => (
+            <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-10rem)] pr-2 scrollbar-thin scrollbar-thumb-purple-600/40">
+              {ocrData.textChunks && ocrData.textChunks.map((chunk, idx) => (
                 <div
-                  key={chunk.id}
+                  key={chunk.id || idx}
+                  ref={(el) => (editorRefs.current[chunk.id] = el)}
                   className={`bg-slate-900 border rounded-3xl p-5 shadow-2xl space-y-4 transition-all ${
-                    activeChunkId === chunk.id ? 'border-purple-500 ring-1 ring-purple-500/50' : 'border-slate-800'
+                    activeChunkId === chunk.id ? 'border-purple-500 ring-2 ring-purple-500/50 shadow-purple-500/20' : 'border-slate-800'
                   }`}
                 >
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="text-xs font-bold text-white">Bounding Box Chunk: {chunk.id}</span>
+                    <span className="text-xs font-bold text-white flex items-center space-x-2">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Bounding Box Chunk: {chunk.id || `chk-p${idx+1}`}</span>
+                    </span>
                     <span className="text-[10px] font-mono bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30">
                       OCR Confidence: {Math.round((chunk.confidence || 0.96) * 100)}%
                     </span>
@@ -277,7 +334,7 @@ export function OcrCorrectionStudioPage({ documentId = 'doc-ingest-001', onBack 
                   <div>
                     <label className="text-[11px] text-slate-400 font-semibold mb-1 block">English OCR Text (Editable):</label>
                     <textarea
-                      rows={2}
+                      rows={3}
                       value={chunk.englishText}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -286,7 +343,7 @@ export function OcrCorrectionStudioPage({ documentId = 'doc-ingest-001', onBack 
                           textChunks: prev.textChunks.map(c => c.id === chunk.id ? { ...c, englishText: val } : c)
                         }));
                       }}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-purple-500 font-mono leading-relaxed"
                     />
                   </div>
 
@@ -294,7 +351,7 @@ export function OcrCorrectionStudioPage({ documentId = 'doc-ingest-001', onBack 
                   <div>
                     <label className="text-[11px] text-purple-400 font-semibold mb-1 block">Urdu Nastaliq OCR Text (Editable):</label>
                     <textarea
-                      rows={2}
+                      rows={3}
                       dir="rtl"
                       value={chunk.urduText}
                       onChange={(e) => {
@@ -304,7 +361,7 @@ export function OcrCorrectionStudioPage({ documentId = 'doc-ingest-001', onBack 
                           textChunks: prev.textChunks.map(c => c.id === chunk.id ? { ...c, urduText: val } : c)
                         }));
                       }}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-purple-200 focus:outline-none focus:border-purple-500 font-mono"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-purple-200 focus:outline-none focus:border-purple-500 font-mono leading-relaxed"
                     />
                   </div>
 

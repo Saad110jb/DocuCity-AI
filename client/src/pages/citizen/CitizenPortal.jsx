@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Book, Download, Search, Filter, FileText, Calendar, Building2, MapPin, User } from 'lucide-react';
 
-export function CitizenPortalPage({ user }) {
+export function CitizenPortalPage({ user, onOpenMap }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAuthority, setSelectedAuthority] = useState('All');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -44,7 +44,7 @@ export function CitizenPortalPage({ user }) {
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center space-x-3">
               <User className="w-8 h-8 text-emerald-400" />
-              <span>Welcome to your Citizen Portal, {user ? user.name : 'Citizen'}</span>
+              <span>Welcome to your Citizen Portal, {user ? user.name : 'Muhammad Saad'}</span>
             </h1>
             <p className="text-slate-400 mt-2">Access public municipal gazettes, track your queries, and explore verified urban policies.</p>
           </div>
@@ -58,7 +58,12 @@ export function CitizenPortalPage({ user }) {
             </div>
             <h3 className="text-lg font-bold text-white mb-2">Interactive Map</h3>
             <p className="text-sm text-slate-400 mb-4">Explore zoning laws directly on the map using Leaflet and GeoJSON overlays.</p>
-            <a href="/" className="text-emerald-400 hover:text-emerald-300 text-sm font-semibold flex items-center">Open Map &rarr;</a>
+            <button
+              onClick={onOpenMap}
+              className="text-emerald-400 hover:text-emerald-300 text-sm font-semibold flex items-center cursor-pointer"
+            >
+              Open Map &rarr;
+            </button>
           </div>
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
             <div className="w-12 h-12 bg-teal-500/20 text-teal-400 rounded-xl flex items-center justify-center mb-4">
@@ -66,7 +71,12 @@ export function CitizenPortalPage({ user }) {
             </div>
             <h3 className="text-lg font-bold text-white mb-2">Bilingual RAG Assistant</h3>
             <p className="text-sm text-slate-400 mb-4">Ask policy questions in English or Urdu and get clause-level legal citations.</p>
-            <a href="/" className="text-teal-400 hover:text-teal-300 text-sm font-semibold flex items-center">Start Chat &rarr;</a>
+            <button
+              onClick={onOpenMap}
+              className="text-teal-400 hover:text-teal-300 text-sm font-semibold flex items-center cursor-pointer"
+            >
+              Start Chat &rarr;
+            </button>
           </div>
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
             <div className="w-12 h-12 bg-blue-500/20 text-blue-400 rounded-xl flex items-center justify-center mb-4">
@@ -172,5 +182,3 @@ export function CitizenPortalPage({ user }) {
     </div>
   );
 }
-
-// Ensure User icon is imported if we add it at the top

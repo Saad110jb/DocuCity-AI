@@ -3,9 +3,27 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status
 from app.schemas.document import DocumentUploadResponse
 from app.services.ocr_service import ocr_service
 from app.services.ner_service import ner_service
+from app.services.universal_parser import universal_parser
 from app.core.security import sanitize_pii
 
 router = APIRouter()
+
+@router.post("/parse")
+async def parse_municipal_document(file: UploadFile = File(...)):
+    """
+    Universal Multimodal Document Parser Endpoint:
+    Ingests any municipal document (PDF, Scanned Gazette, Images) ranging from 1 page to 200+ pages
+    with dynamic page-level character density detection and canonical JSON output.
+    """
+    try:
+        file_bytes = await file.read()
+        result = universal_parser.parse_document(file_bytes=file_bytes, filename=file.filename)
+        return {"status": "success", "data": result}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Dynamic universal parsing failed: {str(e)}"
+        )
 
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(file: UploadFile = File(...)):
@@ -17,22 +35,16 @@ async def upload_document(file: UploadFile = File(...)):
     
     contents = await file.read()
     
-    # 1. OCR Extraction
-    ocr_result = ocr_service.extract_text_from_pdf(contents, file.filename)
+    # Universal Document Parser
+    parsed = universal_parser.parse_document(file_bytes=contents, filename=file.filename)
     
-    # 2. PII Sanitization
-    sanitized_text = sanitize_pii(ocr_result["full_text"])
-    
-    # 3. Entity Extraction via NER
-    entities = ner_service.extract_bylaw_entities(sanitized_text)
-
     doc_id = f"doc-{uuid.uuid4().hex[:8]}"
 
     return DocumentUploadResponse(
         document_id=doc_id,
         filename=file.filename,
         status="processed",
-        message="Document uploaded, OCR processed, PII redacted, and LDA entities extracted.",
-        total_pages=ocr_result["total_pages"],
-        extracted_entities_count=len(entities)
+        message="Document uploaded and processed via Universal Multimodal Document Parser.",
+        total_pages=parsed["total_pages"],
+        extracted_entities_count=len(parsed.get("summary_highlights", []))
     )

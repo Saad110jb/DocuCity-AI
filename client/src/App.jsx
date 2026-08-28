@@ -31,8 +31,16 @@ export default function App() {
 
   const [currentView, setCurrentView] = useState(getViewFromPath);
 
-  // Authenticated user states
-  const [citizenUser, setCitizenUser] = useState(null);
+  // Authenticated user states with localStorage persistence
+  const [citizenUser, setCitizenUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('docucity_citizen_user');
+      return saved ? JSON.parse(saved) : { name: "Muhammad Saad", email: "saad@gmail.com", role: "citizen" };
+    } catch(e) {
+      return { name: "Muhammad Saad", email: "saad@gmail.com", role: "citizen" };
+    }
+  });
+
   const [officerUser, setOfficerUser] = useState(null);
   const [adminUser, setAdminUser] = useState(null);
 
@@ -69,7 +77,18 @@ export default function App() {
   // Login Success Handlers
   const handleCitizenLoginSuccess = (userObj) => {
     setCitizenUser(userObj);
+    try {
+      localStorage.setItem('docucity_citizen_user', JSON.stringify(userObj));
+    } catch(e) {}
     navigateToView('citizen-portal');
+  };
+
+  const handleCitizenLogout = () => {
+    setCitizenUser(null);
+    try {
+      localStorage.removeItem('docucity_citizen_user');
+    } catch(e) {}
+    navigateToView('gis');
   };
 
   const handleOfficerLoginSuccess = (userObj) => {
@@ -208,10 +227,13 @@ export default function App() {
           activeTab={currentView}
           setActiveTab={navigateToView}
           citizenUser={citizenUser}
-          onCitizenLogout={() => setCitizenUser(null)}
+          onCitizenLogout={handleCitizenLogout}
         />
         <main className="flex-1 overflow-y-auto">
-          <CitizenPortalPage user={citizenUser} />
+          <CitizenPortalPage
+            user={citizenUser}
+            onOpenMap={() => navigateToView('gis')}
+          />
         </main>
       </div>
     );
@@ -224,7 +246,7 @@ export default function App() {
         activeTab={currentView}
         setActiveTab={navigateToView}
         citizenUser={citizenUser}
-        onCitizenLogout={() => setCitizenUser(null)}
+        onCitizenLogout={handleCitizenLogout}
       />
 
       <main className="flex-1 overflow-hidden">
