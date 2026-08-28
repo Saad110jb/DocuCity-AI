@@ -37,11 +37,12 @@ export const useSpatialStudio = () => {
   };
 
   // Run topological conflict check whenever vertices change
-  const checkConflicts = async (department, geometry) => {
+  const checkConflicts = async (department, geometry, zone_type = 'Commercial') => {
     try {
       const { data } = await axios.post('http://localhost:5000/api/map/spatial/detect-conflicts', {
         department,
         proposed_geometry: geometry,
+        zone_type,
         category: 'Zoning Modification'
       });
       setConflicts(data.conflicts || []);
