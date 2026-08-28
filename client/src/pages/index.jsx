@@ -6,7 +6,7 @@ import { useRagQuery } from '../hooks/useRagQuery';
 
 export function DashboardPage() {
   const { geoJsonData, selectedZone, setSelectedZone } = useMapLayers();
-  const { messages, loading, language, setLanguage, sendQuery } = useRagQuery();
+  const { messages, loading, language, setLanguage, suggestedPrompts, sendQuery } = useRagQuery(selectedZone);
 
   return (
     <div className="relative w-full h-[calc(100vh-4rem)] overflow-hidden flex">
@@ -28,6 +28,8 @@ export function DashboardPage() {
         setLanguage={setLanguage}
         onSendQuery={sendQuery}
         selectedZone={selectedZone}
+        onClearZone={() => setSelectedZone(null)}
+        suggestedPrompts={suggestedPrompts}
       />
     </div>
   );

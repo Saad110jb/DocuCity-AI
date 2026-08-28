@@ -139,6 +139,41 @@ const CONFLICT_RULES = {
   ]
 };
 
+// Helper: Format raw layers into standard GeoJSON FeatureCollection
+function formatToFeatureCollection(rawLayers) {
+  const features = rawLayers.map(l => {
+    const geom = l.geojson?.geometry || { type: 'Polygon', coordinates: [] };
+    const props = {
+      ...(l.geojson?.properties || {}),
+      zone_name: l.geojson?.properties?.zone_name || l.name,
+      zone_code: l.geojson?.properties?.zone_code || l.layerId,
+      zone_type: l.geojson?.properties?.zone_type || l.zone_type || 'Residential',
+      authority: l.geojson?.properties?.authority || l.authority || l.department,
+      far: l.geojson?.properties?.far || l.far || '',
+      max_height_ft: l.geojson?.properties?.max_height_ft || l.max_height_ft || null,
+      setback_front_ft: l.geojson?.properties?.setback_front_ft || l.setback_front_ft || null,
+      setback_side_ft: l.geojson?.properties?.setback_side_ft || l.setback_side_ft || null,
+      commercialization_status: l.geojson?.properties?.commercialization_status || l.commercialization_status || 'None',
+      dc_rate_percent: l.geojson?.properties?.dc_rate_percent || l.dc_rate_percent || null,
+      gazette_reference: l.geojson?.properties?.gazette_reference || l.gazette_reference || '',
+      permitted_uses: l.geojson?.properties?.permitted_uses || l.permitted_uses || [],
+      category: l.geojson?.properties?.category || '',
+      color: l.color,
+      layerId: l.layerId || l.id,
+    };
+    return {
+      type: 'Feature',
+      geometry: geom,
+      properties: props
+    };
+  });
+
+  return {
+    type: 'FeatureCollection',
+    features
+  };
+}
+
 // ─────────── 1. Resolve Place Name → GeoJSON Polygon ───────────
 async function resolveSpatialLocation(req, res) {
   try {
@@ -203,10 +238,8 @@ async function detectSpatialConflicts(req, res) {
   try {
     const { department = 'LDA', zone_type = 'Commercial', zone_id } = req.body;
 
-    // Get conflicts applicable to this zone_type
     const zoneConflicts = CONFLICT_RULES[zone_type] || CONFLICT_RULES['Commercial'];
 
-    // Always include a base WASA aquifer conflict for any LDA commercial zone
     const baseConflict = {
       conflicting_zone_id: 'ZONE-WASA-AQ-01',
       department: 'WASA',
@@ -237,6 +270,7 @@ async function detectSpatialConflicts(req, res) {
 // ─────────── 4. Fetch All Multi-Department GeoJSON Layers ───────────
 async function getMultiDepartmentLayers(req, res) {
   const department = req.query.department;
+  let resultLayers = memoryLayers;
 
   if (mongoose.connection.readyState === 1) {
     try {
@@ -246,19 +280,25 @@ async function getMultiDepartmentLayers(req, res) {
       }
       const dbLayers = await SpatialLayer.find(query);
       if (dbLayers && dbLayers.length > 0) {
-        return res.json({ layers: dbLayers });
+        resultLayers = dbLayers;
       }
     } catch (e) {
       console.warn('[SpatialController] MongoDB query warning:', e.message);
     }
+  } else if (department && department !== 'All') {
+    resultLayers = memoryLayers.filter(l => l.department.toUpperCase() === department.toUpperCase());
   }
 
-  let filtered = memoryLayers;
-  if (department && department !== 'All') {
-    filtered = memoryLayers.filter(l => l.department.toUpperCase() === department.toUpperCase());
-  }
+  const featureCollection = formatToFeatureCollection(resultLayers);
 
-  return res.json({ layers: filtered });
+  // Return both GeoJSON FeatureCollection structure and layers array for 100% compatibility
+  return res.json({
+    status: 'success',
+    count: resultLayers.length,
+    layers: resultLayers,
+    type: 'FeatureCollection',
+    features: featureCollection.features
+  });
 }
 
 // ─────────── 5. Save Modified Vertex Geometry to MongoDB ───────────
