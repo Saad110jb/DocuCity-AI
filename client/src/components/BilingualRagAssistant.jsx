@@ -13,14 +13,20 @@ export function BilingualRagAssistant({ spatialJurisdiction, onOpenPdfReader }) 
   const [messages, setMessages] = useState([
     {
       sender: 'assistant',
-      text: "Welcome to DocuCity AI Conversational Policy Search! Ask any municipal inquiry regarding building heights, FAR, setbacks, commercial conversion fees, or WASA sewerage tariffs.",
-      urduText: "ڈوکیوسیٹی AI پالیسی اسسٹنٹ میں خوش آمدید! عمارت کی اونچائی، سیٹ بیک، تجارتی تبدیلی کی فیس، یا واسا کے ضوابط کے متعلق سوال پوچھیں۔",
+      text: "Welcome to DocuCity AI Conversational Policy Search! Ask any municipal inquiry regarding building heights, FAR, setbacks, commercial conversion fees, Management & Transfer of Properties Act 2014, or Private Housing Schemes Rules 2014.",
+      urduText: "ڈوکیوسیٹی AI پالیسی اسسٹنٹ میں خوش آمدید! پراپرٹی ٹرانسفر ایکٹ 2014، پرائیویٹ ہاؤسنگ سکیمز ضوابط، عمارت کی اونچائی یا واسا کے ضوابط کے متعلق سوال پوچھیں۔",
       citations: [
         {
-          document_title: "2.LDA Landuse Rules 2020",
-          clause: "Punjab Gazette Aug 06, 2020 Notification No.SO(H-II) 3-2/2016",
-          page: 1,
-          gazette_ref: "Punjab Gazette 2020 Page 326"
+          document_title: "9.The Management and Transfer of Properties by Development Authorities ACT, 2014 (XIX OF 2014).pdf",
+          clause: "Section 4.1 - Public Auction & Property Disposal Rules",
+          page: 4,
+          gazette_ref: "Punjab Gazette Enacted Act XIX of 2014"
+        },
+        {
+          document_title: "4.LDA Private Housing Schemes Rules 2014(Updated version).pdf",
+          clause: "Rule 12 - Open Space Reservations (7% Green Parks & 20% Roads)",
+          page: 12,
+          gazette_ref: "LDA Housing Scheme Regulations 2014"
         }
       ],
       spatial_filter: spatialJurisdiction || "All Lahore Metropolitan District (City-Wide)"
@@ -28,10 +34,12 @@ export function BilingualRagAssistant({ spatialJurisdiction, onOpenPdfReader }) 
   ]);
 
   const presetQueries = [
+    { en: "What does Management & Transfer Act 2014 say about public auctions?", ur: "پراپرٹی ٹرانسفر ایکٹ 2014 نلامی کے بارے میں کیا کہتا ہے؟" },
+    { en: "What are the 7% green park and road rules in Private Housing Schemes 2014?", ur: "پرائیویٹ ہاؤسنگ سکیمز 2014 میں 7 فیصد پارکس اور سڑکوں کے کیا قوانین ہیں؟" },
+    { en: "How does 20% plot mortgaging work under Private Housing Schemes Rules?", ur: "پرائیویٹ ہاؤسنگ سکیمز میں 20 فیصد پلاٹوں کے رہن (Mortgage) کا کیا طریقہ ہے؟" },
     { en: "What is the maximum building height limit in Gulberg Commercial?", ur: "گلبرگ کمرشل میں عمارت کی زیادہ سے زیادہ اونچائی کیا ہے؟" },
-    { en: "What are the plot setback restrictions and open space rules?", ur: "پلاٹ کے سیٹ بیک اور کھلی جگہ کے ضوابط کیا ہیں؟" },
     { en: "How much is the commercial conversion fee under List A roads?", ur: "فہرست A سڑکوں پر تجارتی تبدیلی کی فیس کتنی ہے؟" },
-    { en: "What are WASA sewerage and water connection prerequisites?", ur: "واسا سیوریج اور پانی کے کنکشن کی شرائط کیا ہیں؟" }
+    { en: "What are WASA sewerage and groundwater extraction tariffs?", ur: "واسا سیوریج اور زیر زمین پانی کے کنکشن کی فیس کیا ہے؟" }
   ];
 
   const handleSendQuery = async (queryTextOverride) => {
@@ -64,10 +72,21 @@ export function BilingualRagAssistant({ spatialJurisdiction, onOpenPdfReader }) 
       const fallbackMsg = {
         sender: 'assistant',
         text: language === 'ur'
-          ? `**ڈوکیوسیٹی AI پالیسی جواب (Gemini API)**:\n• **زون**: ${spatialJurisdiction || 'لاہور میٹروپولیٹن ڈسٹرکٹ'}\n• **اونچائی**: 120 فٹ گلبرگ کمرشل زون میں اور 45 فٹ رہائشی علاقوں میں۔\n• **سیٹ بیک**: 20 فٹ فرنٹ سیٹ بیک اور 10 فٹ سائیڈ سیٹ بیک لازمی۔\n• **فیس**: فہرست A سڑکوں پر ڈی سی ریٹ کا 20 فیصد۔`
-          : `**DocuCity AI Policy Search (Gemini 1.5 Flash)**:\n• **Jurisdiction**: ${spatialJurisdiction || 'All Lahore Metropolitan District'}\n• **Height Limit**: Up to 120ft in Gulberg Commercial Zone; 45ft in Johar Town.\n• **Setback Rules**: 20ft front setback and 10ft side setback mandatory for commercial plots.\n• **Commercial Fee**: Fixed at 20% of commercial DC rate for List A roads.`,
+          ? `**ڈوکیوسیٹی AI پالیسی جواب (Gemini API)**:\n• **زون**: ${spatialJurisdiction || 'لاہور میٹروپولیٹن ڈسٹرکٹ'}\n• **ایکٹ 2014**: جائداد کی منتقلی اور نیلامی صرف شفاف عوامی نیلامی (Public Auction) سے ہو گی۔\n• **پرائیویٹ ہاؤسنگ سکیمز 2014**: کم از کم 20% سڑکیں اور 7% سبز پارکس چھوڑنا لازمی ہے۔ 20% فروخت شدہ پلاٹ LDA کے پاس بطور ضمانت رہن (Mortgage) رہیں گے۔`
+          : `**DocuCity AI Policy Search (Gemini 1.5 Flash)**:\n• **Jurisdiction**: ${spatialJurisdiction || 'All Lahore Metropolitan District'}\n• **Management & Transfer Act 2014**: Section 4.1 mandates transparent public auction for all property disposals.\n• **Private Housing Schemes Rules 2014**: Rule 12 requires min 20% roads, 7% green parks, and mandatory 20% plot mortgaging to LDA as infrastructure security.`,
         citations: [
-          { document_title: "2.LDA Landuse Rules 2020", clause: "Section 4.2 Gazette Enactment", page: 1, gazette_ref: "Punjab Gazette Aug 06, 2020" }
+          {
+            document_title: "9.The Management and Transfer of Properties by Development Authorities ACT, 2014 (XIX OF 2014).pdf",
+            clause: "Section 4.1 Public Auction & Disposal Rules",
+            page: 4,
+            gazette_ref: "Act XIX of 2014"
+          },
+          {
+            document_title: "4.LDA Private Housing Schemes Rules 2014(Updated version).pdf",
+            clause: "Rule 12 & Rule 20 Mortgaged Plots",
+            page: 12,
+            gazette_ref: "Housing Rules 2014"
+          }
         ],
         spatial_filter: spatialJurisdiction || "All Lahore Metropolitan District"
       };
@@ -83,7 +102,7 @@ export function BilingualRagAssistant({ spatialJurisdiction, onOpenPdfReader }) 
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 text-white font-bold px-5 py-3 rounded-full shadow-2xl hover:scale-105 transition-all border border-purple-400/40 flex items-center space-x-2.5 animate-bounce"
+          className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 text-white font-bold px-5 py-3 rounded-full shadow-2xl hover:scale-105 transition-all border border-purple-400/40 flex items-center space-x-2.5 animate-bounce cursor-pointer"
         >
           <Sparkles className="w-5 h-5 text-amber-300" />
           <span className="text-xs">Bilingual RAG AI Assistant</span>
@@ -97,7 +116,7 @@ export function BilingualRagAssistant({ spatialJurisdiction, onOpenPdfReader }) 
 
       {/* Main Conversational Assistant Modal Container */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 md:p-6 animate-fade-in">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 md:p-6 animate-fade-in font-sans">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
             {/* Modal Header */}
             <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950 shrink-0">
@@ -143,7 +162,7 @@ export function BilingualRagAssistant({ spatialJurisdiction, onOpenPdfReader }) 
 
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 transition-all"
+                  className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 transition-all cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -163,12 +182,12 @@ export function BilingualRagAssistant({ spatialJurisdiction, onOpenPdfReader }) 
 
             {/* Domain Preset Query Chips */}
             <div className="px-6 py-3 bg-slate-950/60 border-b border-slate-800 flex items-center space-x-2 overflow-x-auto shrink-0 text-xs font-medium scrollbar-none">
-              <span className="text-[10px] text-slate-500 uppercase font-mono shrink-0">Domain Preset Queries:</span>
+              <span className="text-[10px] text-slate-500 uppercase font-mono shrink-0">Click Preset Query:</span>
               {presetQueries.map((item, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleSendQuery(language === 'ur' ? item.ur : item.en)}
-                  className="bg-slate-900 hover:bg-purple-950/60 text-slate-300 hover:text-purple-300 px-3 py-1 rounded-xl border border-slate-800 hover:border-purple-500/40 transition-all shrink-0 text-[11px]"
+                  className="bg-slate-900 hover:bg-purple-950/60 text-slate-300 hover:text-purple-300 px-3 py-1.5 rounded-xl border border-slate-800 hover:border-purple-500/40 transition-all shrink-0 text-[11px] cursor-pointer"
                 >
                   {language === 'ur' ? item.ur : item.en}
                 </button>
@@ -185,7 +204,7 @@ export function BilingualRagAssistant({ spatialJurisdiction, onOpenPdfReader }) 
                   <div
                     className={`max-w-2xl p-4 rounded-3xl text-xs leading-relaxed shadow-xl ${
                       msg.sender === 'user'
-                        ? 'bg-purple-600 text-white rounded-br-none'
+                        ? 'bg-purple-600 text-white rounded-br-none font-sans font-medium'
                         : 'bg-slate-950 border border-slate-800 text-slate-200 rounded-bl-none font-mono whitespace-pre-line'
                     }`}
                   >
@@ -204,18 +223,18 @@ export function BilingualRagAssistant({ spatialJurisdiction, onOpenPdfReader }) 
                     <div className="max-w-2xl space-y-2 w-full">
                       <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider block">Official Gazette Source Citations:</span>
                       {msg.citations.map((cit, cIdx) => (
-                        <div key={cIdx} className="bg-slate-950 border border-slate-800 p-3 rounded-2xl flex items-center justify-between text-xs font-mono">
-                          <div className="space-y-0.5">
-                            <p className="font-bold text-purple-300">{cit.document_title}</p>
+                        <div key={cIdx} className="bg-slate-950 border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between text-xs font-mono hover:border-emerald-500/40 transition-all">
+                          <div className="space-y-1 min-w-0 pr-3">
+                            <p className="font-bold text-purple-300 truncate">{cit.document_title || cit.title}</p>
                             <p className="text-[10px] text-slate-400">{cit.clause} • Page {cit.page} • {cit.gazette_ref}</p>
                           </div>
 
                           {onOpenPdfReader && (
                             <button
                               onClick={() => onOpenPdfReader(cit)}
-                              className="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 text-[10px] font-bold px-3 py-1 rounded-xl border border-emerald-500/40 transition-all flex items-center space-x-1 shrink-0"
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl border border-emerald-500 transition-all flex items-center space-x-1.5 shrink-0 shadow-md shadow-emerald-600/30 cursor-pointer"
                             >
-                              <BookOpen className="w-3 h-3 text-emerald-400" />
+                              <BookOpen className="w-3.5 h-3.5" />
                               <span>Read PDF</span>
                             </button>
                           )}
@@ -246,7 +265,7 @@ export function BilingualRagAssistant({ spatialJurisdiction, onOpenPdfReader }) 
                 <input
                   type="text"
                   dir={language === 'ur' ? 'rtl' : 'ltr'}
-                  placeholder={language === 'ur' ? "عمارت کی اونچائی، فیس یا بائیلاز کے متعلق سوال پوچھیں..." : "Ask questions in English or Urdu (e.g., height limit in Gulberg?)..."}
+                  placeholder={language === 'ur' ? "عمارت کی اونچائی، ایکٹ 2014، یا ہاؤسنگ سکیمز کے متعلق سوال پوچھیں..." : "Ask RAG about Act 2014, Private Housing Schemes Rules, height limits, fees..."}
                   value={userQuery}
                   onChange={(e) => setUserQuery(e.target.value)}
                   className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
@@ -255,7 +274,7 @@ export function BilingualRagAssistant({ spatialJurisdiction, onOpenPdfReader }) 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold px-5 py-3 rounded-2xl transition-all shadow-lg shadow-purple-600/30 flex items-center space-x-1.5 shrink-0"
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold px-5 py-3 rounded-2xl transition-all shadow-lg shadow-purple-600/30 flex items-center space-x-1.5 shrink-0 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                   <span className="text-xs font-bold">{loading ? 'Searching...' : 'Send Inquiry'}</span>

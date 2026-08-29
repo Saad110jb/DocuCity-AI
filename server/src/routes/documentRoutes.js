@@ -6,6 +6,7 @@ const { handleFileUpload } = require('../controllers/uploadController');
 const {
   getIngestionDocuments,
   uploadAndCategorizeDocument,
+  streamPdfFile,
   resolvePolicyConflict,
   toggleStagingStatus,
   deleteIngestionDocument
@@ -21,8 +22,9 @@ const {
 } = require('../controllers/exportController');
 const { handleBilingualRagQuery } = require('../controllers/ragController');
 
-// Upload
+// Upload & Stream Binary PDF
 router.post('/upload', upload.single('file'), handleFileUpload);
+router.get('/pdf/stream/:identifier', streamPdfFile);
 
 // Conversational Policy Search (Bilingual RAG Assistant with Isolated Namespace & PII Redaction)
 router.post('/rag/chat', verifyToken, handleBilingualRagQuery);
