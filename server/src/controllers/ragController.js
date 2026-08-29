@@ -306,10 +306,7 @@ function resolveZoneFacts(query, searchScope, zoneCode, zoneDetails) {
 
 async function handleBilingualRagQuery(req, res) {
   try {
-
     const { query, language, zone_code, spatial_jurisdiction, zone_details, coordinates, collection } = req.body;
-
-    const { query, language, zone_code, spatial_jurisdiction, zone_details } = req.body;
     if (!query) {
       return res.status(400).json({ error: 'Query parameter is required.' });
     }
@@ -330,12 +327,12 @@ async function handleBilingualRagQuery(req, res) {
 
     const qLower = query.toLowerCase();
 
-    // Direct match for uploaded document specific queries
+    // Direct match for uploaded document specific queries: Act 2014
     if (qLower.includes('management and transfer') || qLower.includes('transfer of properties') || qLower.includes('act 2014')) {
       const actAnswer = isUrdu
         ? `**ڈوکیوسیٹی AI پالیسی جواب (پراپرٹی ٹرانسفر ایکٹ 2014)**:\n\n` +
           `📍 **سرکاری اینیکٹمنٹ**: 9.The Management and Transfer of Properties by Development Authorities ACT, 2014 (XIX OF 2014)\n` +
-          `• **شفاف نیلامی (Section 4.1)**: ترقیاتی اداروں (LDA) کے تمام پلاٹوں اور جائداد کی منتقلی اور فروخت صرف کھلی شفاف بھیس اور عوامی نیلامی (Open Public Auction) کے ذریعے ہوگی۔\n` +
+          `• **شفاف نیلامی (Section 4.1)**: ترقیاتی اداروں (LDA) کے تمام پلاٹوں اور جائداد کی منتقلی اور فروخت صرف کھلی شفاف بولی اور عوامی نیلامی (Open Public Auction) کے ذریعے ہوگی۔\n` +
           `• **ڈی سی ریٹ تخمینہ (Section 6.2)**: جائداد کی قیمت کا تعیّن حکومت کے نوٹیفائیڈ ڈی سی ریٹ کے مطابق کیا جائے گا۔\n` +
           `• **عنوان کی تصدیق (Section 8.5)**: بیع نامہ اور ٹرانسفر ڈیڈ کے اجراء سے قبل ملکیت اور بغیر بار (Non-encumbrance) کی تصدیق لازمی ہے۔\n` +
           `• **منسوخی اور ضبطی کے اختیارات (Section 12.2)**: اقساط کی عدم ادائیگی یا خلاف ورزی پر ڈی جی ایل ڈی اے کو پلاٹ کی منسوخی اور ضبطی کا قانونی اختیار حاصل ہے۔\n\n` +
@@ -350,31 +347,8 @@ async function handleBilingualRagQuery(req, res) {
 
       return res.json({
         query,
-        answer: actAnswer,
+        answer: sanitizePiiString(actAnswer),
         language: isUrdu ? 'ur' : 'en',
-
-        zone_code,
-        spatial_jurisdiction: zoneFacts.name,
-        zone_details: zoneFacts,
-        collection: targetNamespace,
-        user_role: userRole
-      }, { timeout: 3000 });
-
-      if (fastApiRes.data && fastApiRes.data.answer) {
-        // Sanitize output PII
-        fastApiRes.data.answer = sanitizePiiString(fastApiRes.data.answer);
-        if (fastApiRes.data.citations) {
-          fastApiRes.data.citations.forEach(c => {
-            if (c.snippet) c.snippet = sanitizePiiString(c.snippet);
-          });
-        }
-        fastApiRes.data.vector_namespace = targetNamespace;
-        fastApiRes.data.pii_redacted = true;
-        return res.json(fastApiRes.data);
-      }
-    } catch (e) {
-      // FastAPI offline, continue to direct Gemini
-
         spatial_filter: 'Management & Transfer Act 2014',
         zone_code: 'ACT-2014',
         authority: 'LDA & Punjab Government',
@@ -387,19 +361,24 @@ async function handleBilingualRagQuery(req, res) {
             clause: "Public Auction & Resumption Powers",
             page: 4,
             confidence: 0.99,
-            snippet: "Disposal of development authority properties strictly through transparent public auction and resumption rules on default.",
+            snippet: sanitizePiiString("Disposal of development authority properties strictly through transparent public auction and resumption rules on default."),
             gazette_ref: "Punjab Gazette Act XIX of 2014 Page 4",
-            authority: "LDA"
+            authority: "LDA",
+            namespace: targetNamespace
           }
         ],
         suggested_followups: [
           "What is the property transfer fee structure under Act 2014?",
           "How are cancellation appeals handled under Section 15?"
         ],
-        engine: 'Google Gemini 1.5 Flash API + Uploaded Gazette Storage'
+        engine: `Google Gemini 1.5 Flash API + Isolated Namespace (${targetNamespace})`,
+        vector_namespace: targetNamespace,
+        pii_redacted: true,
+        access_boundary: isPublic ? "Public Citizen Access (Read-Only)" : "Authorized Officer Access"
       });
     }
 
+    // Direct match for Private Housing Schemes Rules 2014
     if (qLower.includes('private housing schemes') || qLower.includes('housing schemes rules')) {
       const housingAnswer = isUrdu
         ? `**ڈوکیوسیٹی AI پالیسی جواب (پرائیویٹ ہاؤسنگ سکیمز ضوابط 2014)**:\n\n` +
@@ -419,7 +398,7 @@ async function handleBilingualRagQuery(req, res) {
 
       return res.json({
         query,
-        answer: housingAnswer,
+        answer: sanitizePiiString(housingAnswer),
         language: isUrdu ? 'ur' : 'en',
         spatial_filter: 'LDA Private Housing Schemes Rules 2014',
         zone_code: 'HOUSING-RULES-2014',
@@ -433,17 +412,49 @@ async function handleBilingualRagQuery(req, res) {
             clause: "Open Spaces (7% Parks) & Mortgaged Plots (20%)",
             page: 12,
             confidence: 0.99,
-            snippet: "Rule 12.4 requires 7% green parks; Rule 20.1 requires mortgaging 20% saleable plots to LDA as infrastructure security.",
+            snippet: sanitizePiiString("Rule 12.4 requires 7% green parks; Rule 20.1 requires mortgaging 20% saleable plots to LDA as infrastructure security."),
             gazette_ref: "LDA Housing Schemes Rules 2014 Page 12",
-            authority: "LDA"
+            authority: "LDA",
+            namespace: targetNamespace
           }
         ],
         suggested_followups: [
           "What happens if a sponsor fails to complete infrastructure?",
           "What is the minimum land size required for a private housing scheme?"
         ],
-        engine: 'Google Gemini 1.5 Flash API + Uploaded Gazette Storage'
+        engine: `Google Gemini 1.5 Flash API + Isolated Namespace (${targetNamespace})`,
+        vector_namespace: targetNamespace,
+        pii_redacted: true,
+        access_boundary: isPublic ? "Public Citizen Access (Read-Only)" : "Authorized Officer Access"
       });
+    }
+
+    // 1. Try Python FastAPI microservice first
+    try {
+      const fastApiRes = await axios.post(`${FASTAPI_URL}/api/v1/rag/chat`, {
+        query,
+        language: isUrdu ? 'ur' : 'en',
+        zone_code,
+        spatial_jurisdiction: zoneFacts.name,
+        zone_details: zoneFacts,
+        collection: targetNamespace,
+        user_role: userRole
+      }, { timeout: 3000 });
+
+      if (fastApiRes.data && fastApiRes.data.answer) {
+        fastApiRes.data.answer = sanitizePiiString(fastApiRes.data.answer);
+        if (fastApiRes.data.citations) {
+          fastApiRes.data.citations.forEach(c => {
+            if (c.snippet) c.snippet = sanitizePiiString(c.snippet);
+          });
+        }
+        fastApiRes.data.vector_namespace = targetNamespace;
+        fastApiRes.data.pii_redacted = true;
+        fastApiRes.data.access_boundary = isPublic ? "Public Citizen Access (Read-Only)" : "Authorized Officer Access";
+        return res.json(fastApiRes.data);
+      }
+    } catch (e) {
+      // FastAPI offline, continue to direct Gemini
     }
 
     // 2. Direct Gemini 1.5 Flash API Call with Exact Zone Bylaws
@@ -453,12 +464,9 @@ USER QUESTION: "${query}"
 TARGET PLACE NAME: "${placeNameClean}"
 ISSUING AUTHORITY: "${zoneFacts.authority}"
 ZONE CATEGORY: "${zoneFacts.zone_type}"
-
 TARGET ISOLATED NAMESPACE: "${targetNamespace}"
-ENACTED BYLAWS FOR THIS EXACT AREA:
 
 ENACTED BYLAWS FOR "${placeNameClean}":
-
 - Floor Area Ratio (FAR): ${zoneFacts.far}
 - Maximum Building Height: ${zoneFacts.max_height}
 - Mandatory Front Road Setback: ${zoneFacts.setback_front}
@@ -528,9 +536,22 @@ INSTRUCTIONS:
         clause: "Clause 2.5 (Low Rise Apartment Ground Coverage 65%)",
         page: 1,
         confidence: 0.99,
-
-        snippet: sanitizePiiString(`Enacted spatial bylaws for ${zoneFacts.name}: FAR ${zoneFacts.far}, Max Height ${zoneFacts.max_height}, Setback ${zoneFacts.setback_front}.`),
-        gazette_ref: zoneFacts.gazette_ref,
+        snippet: sanitizePiiString(`Enacted spatial bylaws for ${placeNameClean}: FAR ${zoneFacts.far}, Max Height ${zoneFacts.max_height}, Setback ${zoneFacts.setback_front}.`),
+        gazette_ref: "Office Order No. LDA/DC&I/725 Dated 28th October, 2022",
+        authority: zoneFacts.authority,
+        namespace: targetNamespace
+      },
+      {
+        document_title: "2.LDA Landuse Rules_2020.pdf",
+        publication_date: "2020-08-06",
+        gazette_number: "The Punjab Gazette Registered No. L.-7532",
+        clause_id: "Section 4.2 & Commercialization List A",
+        clause: "Land Use Zoning Classifications & List A Conversion Fee Rules",
+        page: 14,
+        confidence: 0.98,
+        snippet: sanitizePiiString("Permanent commercialization conversion fee is capped at 20% of commercial DC rate."),
+        gazette_ref: "Punjab Gazette Aug 06, 2020 Notification No. SO(H-II) 3-2/2016",
+        authority: zoneFacts.authority,
         namespace: targetNamespace
       }
     ];
@@ -543,39 +564,21 @@ INSTRUCTIONS:
         confidence: 0.96,
         snippet: sanitizePiiString(zoneFacts.wasa_rules),
         gazette_ref: 'WASA Environmental Order 2019/2026',
+        authority: 'WASA',
         namespace: targetNamespace
       });
     }
 
-    const shortName = zoneFacts.name.split(' ')[0];
+    const shortName = placeNameClean.split(' ')[0];
     const suggestedFollowups = isUrdu ? [
       `${shortName} میں عمارت کی اونچائی کی کیا حد ہے؟`,
       `${shortName} میں تجارتی تبدیلی کی فیس کتنی ہے؟`,
       `کیا واسا سے این او سی (NOC) لینا لازمی ہے؟`
     ] : [
-      `What is the maximum building height in ${shortName}?`,
-      `What is the commercial conversion fee in ${shortName}?`,
-      `What are the front and side setback requirements for ${shortName}?`
+      `What is the maximum building height in ${placeNameClean}?`,
+      `What is the commercial conversion fee in ${placeNameClean}?`,
+      `What are the front and side setback requirements for ${placeNameClean}?`
     ];
-
-        snippet: `Enacted bylaws for ${placeNameClean}: FAR ${zoneFacts.far}, Max Height ${zoneFacts.max_height}.`,
-        gazette_ref: "Office Order No. LDA/DC&I/725 Dated 28th October, 2022",
-        authority: zoneFacts.authority
-      },
-      {
-        document_title: "2.LDA Landuse Rules_2020.pdf",
-        publication_date: "2020-08-06",
-        gazette_number: "The Punjab Gazette Registered No. L.-7532",
-        clause_id: "Section 4.2 & Commercialization List A",
-        clause: "Land Use Zoning Classifications & List A Conversion Fee Rules",
-        page: 14,
-        confidence: 0.98,
-        snippet: `Permanent commercialization conversion fee is capped at 20% of commercial DC rate.`,
-        gazette_ref: "Punjab Gazette Aug 06, 2020 Notification No. SO(H-II) 3-2/2016",
-        authority: zoneFacts.authority
-      }
-    ];
-
 
     return res.json({
       query,
@@ -585,19 +588,11 @@ INSTRUCTIONS:
       zone_code: zone_code || 'LAHORE-ZONE',
       authority: zoneFacts.authority,
       citations,
-
       suggested_followups: suggestedFollowups,
       engine: `Google Gemini 1.5 Flash API + Isolated Namespace (${targetNamespace})`,
       vector_namespace: targetNamespace,
       pii_redacted: true,
       access_boundary: isPublic ? "Public Citizen Access (Read-Only)" : "Authorized Officer Access"
-
-      suggested_followups: [
-        `What is the maximum building height in ${placeNameClean}?`,
-        `What is the commercial conversion fee in ${placeNameClean}?`
-      ],
-      engine: 'Google Gemini 1.5 Flash API + All-Lahore Spatial Knowledge Graph'
-
     });
   } catch (err) {
     console.error('[RAGController] Error in handleBilingualRagQuery:', err);
