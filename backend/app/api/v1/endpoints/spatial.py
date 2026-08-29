@@ -196,11 +196,21 @@ async def get_multi_department_layers(department: Optional[str] = None):
 
 # --- 5. Vertex & Geometry Update ---
 @router.put("/layers/{id}")
-async def update_layer_geometry(id: str, payload: LayerUpdateRequest):
-    """Saves manual vertex and boundary edits made by officers on Leaflet.js map."""
+async def update_layer_geometry(id: str, payload: LayerUpdateRequest, authorization: Optional[str] = None):
+    """
+    Saves manual vertex and boundary edits made by authorized officers.
+    Public users are restricted with Read-Only permissions.
+    """
+    # Enforce Read-Only Permission boundary for public users
+    if not authorization or "public" in authorization.lower() or "guest" in authorization.lower():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access Denied: Public users have Read-Only permissions and cannot modify zoning geometries. Municipal Officer credentials required."
+        )
+
     return {
         "status": "success",
-        "message": f"Layer {id} geometry updated and saved to spatial database.",
+        "message": f"Layer {id} geometry updated and saved to spatial database by authorized officer.",
         "layer_id": id,
         "updated_geometry": payload.geometry
     }

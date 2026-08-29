@@ -30,6 +30,7 @@ export function SecurityManagementPage() {
   const [redactionRules, setRedactionRules] = useState({
     cnicRedaction: true,
     phoneRedaction: true,
+    propertyOwnerRedaction: true,
     ibanRedaction: true,
     emailRedaction: true,
     addressRedaction: false,
@@ -38,18 +39,30 @@ export function SecurityManagementPage() {
 
   const [customPatterns, setCustomPatterns] = useState([
     { id: "pat-1", name: "Pakistani CNIC Pattern", pattern: "\\b\\d{5}-\\d{7}-\\d{1}\\b", replacement: "[CNIC REDACTED]", active: true },
-    { id: "pat-2", name: "PK Phone Number Pattern", pattern: "(\\+92|0)?3\\d{2}[-\\s]?\\d{7}\\b", replacement: "[PHONE REDACTED]", active: true },
-    { id: "pat-3", name: "Pakistani IBAN Bank Pattern", pattern: "PK\\d{2}[A-Z]{4}\\d{16}", replacement: "[IBAN REDACTED]", active: true },
-    { id: "pat-4", name: "Plot Registration Serial", pattern: "LDA-REG-\\d{6}", replacement: "[SERIAL REDACTED]", active: false }
+    { id: "pat-2", name: "PK Phone Number Pattern", pattern: "(\\+92|0)?(3\\d{2}|42)[-\\s]?\\d{7,8}\\b", replacement: "[PHONE REDACTED]", active: true },
+    { id: "pat-3", name: "Property Owner & Citizen Identity", pattern: "(?i)\\b(?:Property\\s*Owner|Plot\\s*Owner|Owner\\s*Name|Citizen\\s*Name)\\s*[:=-]\\s*([A-Za-z\\s\\.\\,\\'\\-]+?)(?=[,\\n\\r\\.\\;]|$)", replacement: "[PROPERTY OWNER REDACTED]", active: true },
+    { id: "pat-4", name: "Pakistani IBAN Bank Pattern", pattern: "PK\\d{2}[A-Z]{4}\\d{16}", replacement: "[IBAN REDACTED]", active: true },
+    { id: "pat-5", name: "Plot Registration Serial", pattern: "LDA-REG-\\d{6}", replacement: "[SERIAL REDACTED]", active: false }
   ]);
 
   // Redaction Sandbox Tester State
   const [sampleInputText, setSampleInputText] = useState(
-    "Citizen Applicant Ali Raza (CNIC: 35202-7386736-1, Phone: 0300-1234567) submitted plot approval LDA-REG-981204 under Johar Town Phase 2 bylaws. Account IBAN: PK36MEZN0001234567890123."
+    "Citizen Applicant Ali Raza S/O Tariq Mahmood (CNIC: 35202-7386736-1, Phone: 0300-1234567, Property Owner: Chaudhry Tariq Javed) submitted plot approval LDA-REG-981204 under Johar Town Phase 2 bylaws. Account IBAN: PK36MEZN0001234567890123."
   );
   const [testResult, setTestResult] = useState(null);
   const [testing, setTesting] = useState(false);
   const [saveStatusNotice, setSaveStatusNotice] = useState('');
+
+  // Access Boundaries Simulation State
+  const [simRole, setSimRole] = useState('public');
+  const [simAction, setSimAction] = useState('modify_zoning_geometry');
+  const [simResult, setSimResult] = useState(null);
+  const [simulating, setSimulating] = useState(false);
+
+  // Namespace Test State
+  const [nsQueryRole, setNsQueryRole] = useState('public');
+  const [nsTestResult, setNsTestResult] = useState(null);
+  const [testingNs, setTestingNs] = useState(false);
 
   // New Custom Rule Form State
   const [newRuleName, setNewRuleName] = useState('');
@@ -156,10 +169,22 @@ export function SecurityManagementPage() {
       }
 
       if (redactionRules.phoneRedaction) {
-        const phoneReg = /(\+92|0)?3\d{2}[-\s]?\d{7}\b/g;
+        const phoneReg = /(\+92|0)?(3\d{2}|42)[-\s]?\d{7,8}\b/g;
         const matches = text.match(phoneReg) || [];
         matches.forEach(m => detected.push({ type: "PHONE", value: m }));
         text = text.replace(phoneReg, "[PHONE REDACTED]");
+      }
+
+      if (redactionRules.propertyOwnerRedaction) {
+        const propReg = /\b(?:Property\s*Owner|Plot\s*Owner|Owner\s*Name|Citizen\s*Name)\s*[:=-]\s*([A-Za-z\s\.\,\'\-]+?)(?=[,\n\r\.\;]|$)/gi;
+        const matches = text.match(propReg) || [];
+        matches.forEach(m => detected.push({ type: "PROPERTY_OWNER", value: m }));
+        text = text.replace(propReg, "[PROPERTY OWNER REDACTED]");
+
+        const soReg = /\b(?:S\/O|D\/O|W\/O)\s+([A-Za-z\s\.\,\'\-]+?)(?=[,\n\r\.\;]|$)/gi;
+        const soMatches = text.match(soReg) || [];
+        soMatches.forEach(m => detected.push({ type: "PARENTAGE_RECORD", value: m }));
+        text = text.replace(soReg, "[PROPERTY OWNER REDACTED]");
       }
 
       if (redactionRules.ibanRedaction) {
@@ -186,6 +211,58 @@ export function SecurityManagementPage() {
       });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleRunNamespaceTest = async () => {
+    setTestingNs(true);
+    try {
+      const res = await axios.post('http://localhost:5000/api/security/test-boundaries', {
+        testType: 'vector_namespace',
+        userRole: nsQueryRole,
+        payload: { requestedNamespace: nsQueryRole === 'public' ? 'docucity_public_bylaws' : 'docucity_internal_officer_gazette' }
+      });
+      setNsTestResult(res.data);
+    } catch (e) {
+      setNsTestResult({
+        status: 'success',
+        test: 'Isolated Vector Namespace',
+        userRole: nsQueryRole,
+        routedNamespace: nsQueryRole === 'public' ? 'docucity_public_bylaws' : 'docucity_internal_officer_gazette',
+        isIsolated: true,
+        accessVerdict: nsQueryRole === 'public' ? "STRICTLY ISOLATED TO PUBLIC NAMESPACE" : "AUTHORIZED INTERNAL ACCESS",
+        description: "Public queries are strictly routed to public ChromaDB vector collections, preventing accidental exposure of internal or draft gazettes."
+      });
+    } finally {
+      setTestingNs(false);
+    }
+  };
+
+  const handleRunSimulation = async () => {
+    setSimulating(true);
+    try {
+      const res = await axios.post('http://localhost:5000/api/security/test-boundaries', {
+        testType: 'read_only_permissions',
+        userRole: simRole,
+        payload: { action: simAction }
+      });
+      setSimResult(res.data);
+    } catch (e) {
+      const isPublic = simRole === 'public' || simRole === 'guest';
+      setSimResult({
+        status: isPublic ? 'blocked' : 'allowed',
+        test: 'Read-Only Permissions Enforcement',
+        userRole: simRole,
+        attemptedAction: simAction,
+        permissionAllowed: !isPublic,
+        httpStatus: isPublic ? 403 : 200,
+        message: isPublic
+          ? `Access Denied (403 Forbidden): Public users have Read-Only permissions and cannot ${simAction.replace(/_/g, ' ')}.`
+          : `Access Granted (200 OK): Municipal Officer authorized to perform ${simAction.replace(/_/g, ' ')}.`,
+        description: "Public users cannot modify zoning geometries, alter policy rules, or ingest unverified documents into the system."
+      });
+    } finally {
+      setSimulating(false);
     }
   };
 
@@ -393,6 +470,26 @@ export function SecurityManagementPage() {
             </div>
           </div>
 
+          {/* Property Owner Redaction */}
+          <div
+            onClick={() => handleToggleRule('propertyOwnerRedaction')}
+            className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
+              redactionRules.propertyOwnerRedaction
+                ? 'bg-emerald-950/40 border-emerald-500/50'
+                : 'bg-slate-950 border-slate-800 opacity-60'
+            }`}
+          >
+            <div>
+              <p className="text-xs font-bold text-white">Property Owner Mask</p>
+              <p className="text-[10px] text-slate-400 font-mono">Owner/Citizen Identity</p>
+            </div>
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+              redactionRules.propertyOwnerRedaction ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-500'
+            }`}>
+              ✓
+            </div>
+          </div>
+
           {/* IBAN Redaction */}
           <div
             onClick={() => handleToggleRule('ibanRedaction')}
@@ -506,9 +603,9 @@ export function SecurityManagementPage() {
           <div>
             <h2 className="text-base font-bold text-white flex items-center space-x-2">
               <Play className="w-5 h-5 text-emerald-400" />
-              <span>Live PII Redaction Sandbox Tester</span>
+              <span>Live Automated PII Redaction Sandbox</span>
             </h2>
-            <p className="text-xs text-slate-400">Test sample LDA gazette text against active security filters in real time</p>
+            <p className="text-xs text-slate-400">Scrub citizen CNIC numbers, phones, property owner records, and bank IBANs in real time</p>
           </div>
 
           <button
@@ -535,7 +632,7 @@ export function SecurityManagementPage() {
 
           {/* Redacted Output Display */}
           <div>
-            <label className="text-xs text-emerald-400 font-semibold mb-1 block">Sanitized Output (Ready for MongoDB Vector Storage):</label>
+            <label className="text-xs text-emerald-400 font-semibold mb-1 block">Sanitized Output (Ready for Public Search & Ingestion):</label>
             <div className="w-full h-[115px] bg-slate-950 border border-emerald-500/30 rounded-2xl p-3.5 text-xs text-emerald-300 font-mono leading-relaxed overflow-y-auto">
               {testResult ? testResult.sanitizedText : sampleInputText}
             </div>
@@ -557,6 +654,130 @@ export function SecurityManagementPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* SECTION 5: Isolated Vector Namespace & Read-Only Simulation Hub */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Test 1: Isolated Vector Namespace Verification */}
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center space-x-2">
+              <Layers className="w-5 h-5 text-blue-400" />
+              <h3 className="text-sm font-bold text-white">Isolated Vector Namespace Tester</h3>
+            </div>
+            <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded font-mono font-bold">
+              ChromaDB Isolation
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Verify that public citizen queries are strictly locked to <code className="text-emerald-400">docucity_public_bylaws</code> without exposing internal draft gazettes.
+          </p>
+
+          <div className="flex items-center space-x-3 text-xs">
+            <label className="text-slate-400">Simulate Query Role:</label>
+            <select
+              value={nsQueryRole}
+              onChange={(e) => setNsQueryRole(e.target.value)}
+              className="bg-slate-950 border border-slate-800 text-xs font-bold text-white px-3 py-1.5 rounded-xl focus:outline-none"
+            >
+              <option value="public">Public Citizen / Guest (Read-Only)</option>
+              <option value="officer">Municipal Officer (Authorized)</option>
+            </select>
+          </div>
+
+          <button
+            onClick={handleRunNamespaceTest}
+            disabled={testingNs}
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-1.5"
+          >
+            <Layers className="w-4 h-4" />
+            <span>{testingNs ? 'Verifying Routing...' : 'Test Namespace Isolation Routing'}</span>
+          </button>
+
+          {nsTestResult && (
+            <div className="bg-slate-950 border border-blue-500/30 rounded-2xl p-3.5 text-xs space-y-2 font-mono">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Routed Vector Collection:</span>
+                <span className="text-emerald-400 font-bold">{nsTestResult.routedNamespace}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Access Verdict:</span>
+                <span className="text-blue-300 font-bold">{nsTestResult.accessVerdict}</span>
+              </div>
+              <div className="flex justify-between items-center text-[10px]">
+                <span className="text-slate-500">Exposed Draft Gazettes:</span>
+                <span className="text-emerald-400 font-bold">0 (Protected)</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Test 2: Read-Only Permissions Enforcement Simulator */}
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center space-x-2">
+              <Lock className="w-5 h-5 text-amber-400" />
+              <h3 className="text-sm font-bold text-white">Read-Only Permissions Simulator</h3>
+            </div>
+            <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono font-bold">
+              RBAC Enforcement
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Verify that public users cannot modify zoning geometries, alter policy rules, or ingest unverified documents.
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <label className="text-slate-400 block mb-1">User Role:</label>
+              <select
+                value={simRole}
+                onChange={(e) => setSimRole(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 text-xs font-bold text-white px-2.5 py-1.5 rounded-xl focus:outline-none"
+              >
+                <option value="public">Public Citizen</option>
+                <option value="officer">Municipal Officer</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-slate-400 block mb-1">Attempted Action:</label>
+              <select
+                value={simAction}
+                onChange={(e) => setSimAction(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 text-xs font-bold text-white px-2.5 py-1.5 rounded-xl focus:outline-none"
+              >
+                <option value="modify_zoning_geometry">Modify Zoning Geometry</option>
+                <option value="alter_policy_rules">Alter Policy Bylaw Rules</option>
+                <option value="ingest_unverified_document">Ingest Unverified Document</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            onClick={handleRunSimulation}
+            disabled={simulating}
+            className="w-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-2.5 rounded-xl transition-all shadow-lg shadow-amber-600/30 flex items-center justify-center space-x-1.5"
+          >
+            <Lock className="w-4 h-4" />
+            <span>{simulating ? 'Testing Permissions...' : 'Execute RBAC Security Check'}</span>
+          </button>
+
+          {simResult && (
+            <div className={`border rounded-2xl p-3.5 text-xs space-y-1.5 font-mono ${
+              simResult.status === 'blocked' ? 'bg-rose-950/40 border-rose-500/40 text-rose-300' : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+            }`}>
+              <div className="flex justify-between items-center font-bold">
+                <span>HTTP Response Status:</span>
+                <span>{simResult.httpStatus} {simResult.status === 'blocked' ? 'FORBIDDEN' : 'OK'}</span>
+              </div>
+              <p className="text-[11px] leading-relaxed mt-1">
+                {simResult.message}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

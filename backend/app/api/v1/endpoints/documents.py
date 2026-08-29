@@ -12,13 +12,22 @@ router = APIRouter()
 async def parse_municipal_document(file: UploadFile = File(...)):
     """
     Universal Multimodal Document Parser Endpoint:
-    Ingests any municipal document (PDF, Scanned Gazette, Images) ranging from 1 page to 200+ pages
-    with dynamic page-level character density detection and canonical JSON output.
+    Ingests any municipal document with dynamic character density detection,
+    and applies automated PII scrubbing (CNIC, phone, property owner records).
     """
     try:
         file_bytes = await file.read()
         result = universal_parser.parse_document(file_bytes=file_bytes, filename=file.filename)
-        return {"status": "success", "data": result}
+        
+        # Automated PII Redaction across all extracted pages
+        if "pages" in result:
+            for page in result["pages"]:
+                if "text_en" in page:
+                    page["text_en"] = sanitize_pii(page["text_en"])
+                if "text_ur" in page:
+                    page["text_ur"] = sanitize_pii(page["text_ur"])
+
+        return {"status": "success", "data": result, "pii_redacted": True}
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -44,7 +53,7 @@ async def upload_document(file: UploadFile = File(...)):
         document_id=doc_id,
         filename=file.filename,
         status="processed",
-        message="Document uploaded and processed via Universal Multimodal Document Parser.",
+        message="Document uploaded and processed via Universal Multimodal Document Parser (PII Sanitized).",
         total_pages=parsed["total_pages"],
         extracted_entities_count=len(parsed.get("summary_highlights", []))
     )

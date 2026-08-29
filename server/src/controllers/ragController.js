@@ -1,5 +1,6 @@
 const axios = require('axios');
 const mongoose = require('mongoose');
+const { sanitizePiiString } = require('../middleware/piiRedaction');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AQ.Ab8RN6KqWLpA4np6Wc9VCLWxCZM8agDJskFO8lYsQ6G0p3bQww';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -246,10 +247,17 @@ function resolveZoneFacts(query, searchScope, zoneCode, zoneDetails) {
 
 async function handleBilingualRagQuery(req, res) {
   try {
-    const { query, language, zone_code, spatial_jurisdiction, zone_details, coordinates } = req.body;
+    const { query, language, zone_code, spatial_jurisdiction, zone_details, coordinates, collection } = req.body;
     if (!query) {
       return res.status(400).json({ error: 'Query parameter is required.' });
     }
+
+    // Role-based namespace isolation
+    const userRole = req.user ? req.user.role : 'public';
+    const isPublic = (userRole === 'public' || userRole === 'guest' || userRole === 'citizen');
+    
+    // Public queries are strictly forced to the public collection namespace
+    const targetNamespace = isPublic ? 'docucity_public_bylaws' : (collection || 'docucity_public_bylaws');
 
     const isUrdu = language === 'ur' || /[\u0600-\u06FF]/.test(query);
     const searchScope = spatial_jurisdiction || (zone_details && zone_details.zone_name) || zone_code;
@@ -264,10 +272,21 @@ async function handleBilingualRagQuery(req, res) {
         language: isUrdu ? 'ur' : 'en',
         zone_code,
         spatial_jurisdiction: zoneFacts.name,
-        zone_details: zoneFacts
+        zone_details: zoneFacts,
+        collection: targetNamespace,
+        user_role: userRole
       }, { timeout: 3000 });
 
       if (fastApiRes.data && fastApiRes.data.answer) {
+        // Sanitize output PII
+        fastApiRes.data.answer = sanitizePiiString(fastApiRes.data.answer);
+        if (fastApiRes.data.citations) {
+          fastApiRes.data.citations.forEach(c => {
+            if (c.snippet) c.snippet = sanitizePiiString(c.snippet);
+          });
+        }
+        fastApiRes.data.vector_namespace = targetNamespace;
+        fastApiRes.data.pii_redacted = true;
         return res.json(fastApiRes.data);
       }
     } catch (e) {
@@ -281,6 +300,7 @@ USER QUESTION: "${query}"
 LOCATION CONTEXT: "${zoneFacts.name}"
 ISSUING AUTHORITY: "${zoneFacts.authority}"
 ZONE CATEGORY: "${zoneFacts.zone_type}"
+TARGET ISOLATED NAMESPACE: "${targetNamespace}"
 ENACTED BYLAWS FOR THIS EXACT AREA:
 - Floor Area Ratio (FAR): ${zoneFacts.far}
 - Maximum Building Height: ${zoneFacts.max_height}
@@ -385,14 +405,18 @@ INSTRUCTIONS:
       }
     }
 
+    // 4. Automated PII Redaction on final answer
+    const sanitizedAnswer = sanitizePiiString(geminiAnswer);
+
     const citations = [
       {
         document_title: zoneFacts.gazette_ref.includes('LDA') ? 'LDA Land Use & Building Regulations 2026' : (zoneFacts.gazette_ref.includes('WCLA') ? 'Punjab Heritage Authority Act 2012' : 'Punjab Municipal Gazettes'),
         clause: zoneFacts.gazette_ref,
         page: zoneFacts.name.includes('Gulberg') ? 14 : (zoneFacts.name.includes('Walled City') ? 3 : 8),
         confidence: 0.99,
-        snippet: `Enacted spatial bylaws for ${zoneFacts.name}: FAR ${zoneFacts.far}, Max Height ${zoneFacts.max_height}, Setback ${zoneFacts.setback_front}.`,
-        gazette_ref: zoneFacts.gazette_ref
+        snippet: sanitizePiiString(`Enacted spatial bylaws for ${zoneFacts.name}: FAR ${zoneFacts.far}, Max Height ${zoneFacts.max_height}, Setback ${zoneFacts.setback_front}.`),
+        gazette_ref: zoneFacts.gazette_ref,
+        namespace: targetNamespace
       }
     ];
 
@@ -402,8 +426,9 @@ INSTRUCTIONS:
         clause: 'Water Tariff & Infrastructure Protection Clauses',
         page: 5,
         confidence: 0.96,
-        snippet: zoneFacts.wasa_rules,
-        gazette_ref: 'WASA Environmental Order 2019/2026'
+        snippet: sanitizePiiString(zoneFacts.wasa_rules),
+        gazette_ref: 'WASA Environmental Order 2019/2026',
+        namespace: targetNamespace
       });
     }
 
@@ -420,14 +445,17 @@ INSTRUCTIONS:
 
     return res.json({
       query,
-      answer: geminiAnswer,
+      answer: sanitizedAnswer,
       language: isUrdu ? 'ur' : 'en',
       spatial_filter: zoneFacts.name,
       zone_code: zone_code || 'LAHORE-ZONE',
       authority: zoneFacts.authority,
       citations,
       suggested_followups: suggestedFollowups,
-      engine: 'Google Gemini 1.5 Flash API + All-Lahore Spatial Knowledge Graph'
+      engine: `Google Gemini 1.5 Flash API + Isolated Namespace (${targetNamespace})`,
+      vector_namespace: targetNamespace,
+      pii_redacted: true,
+      access_boundary: isPublic ? "Public Citizen Access (Read-Only)" : "Authorized Officer Access"
     });
   } catch (err) {
     console.error('[RAGController] Error in handleBilingualRagQuery:', err);

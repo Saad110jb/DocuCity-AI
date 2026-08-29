@@ -21,11 +21,17 @@ function verifyToken(req, res, next) {
   }
 }
 
-function requireRole(allowedRoles) {
+function requireRole(allowedRoles, actionDescription = "this action") {
   return (req, res, next) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    const currentRole = req.user ? req.user.role : 'public';
+    if (!req.user || !allowedRoles.includes(currentRole)) {
+      const isPublic = currentRole === 'public' || currentRole === 'guest' || currentRole === 'citizen';
       return res.status(403).json({ 
-        error: `Access Denied. Role '${req.user ? req.user.role : 'guest'}' lacks permissions for this action.` 
+        error: isPublic
+          ? `Access Denied: Public users have Read-Only permissions and cannot ${actionDescription}. Municipal Officer or Admin authorization is required.`
+          : `Access Denied: Role '${currentRole}' lacks required permissions to ${actionDescription}.`,
+        readOnlyEnforced: true,
+        userRole: currentRole
       });
     }
     next();

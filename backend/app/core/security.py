@@ -23,17 +23,39 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 def sanitize_pii(text: str) -> str:
     """
-    Sanitizes CNIC numbers (35202-XXXXXXX-X) and phone numbers for privacy compliance.
+    Sanitizes citizen PII including:
+    - CNIC numbers (35202-XXXXXXX-X or 13-digit format)
+    - Pakistani Phone numbers (+923XX..., 03XX..., 042-...)
+    - Property owner records & citizen ownership identifiers (Owner Name, Property Owner, S/O, D/O, Plot Owner)
+    - IBAN and bank account numbers
+    - Personal email addresses
     """
     if not text:
         return text
 
-    # CNIC pattern: XXXXX-XXXXXXX-X
+    # 1. Pakistani IBAN & Bank Accounts: PKXXMEZN...
+    iban_pattern = r'\bPK\d{2}[A-Z]{4}\d{16}\b'
+    text = re.sub(iban_pattern, '[IBAN REDACTED]', text, flags=re.IGNORECASE)
+
+    # 2. Personal Email addresses
+    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
+    text = re.sub(email_pattern, '[EMAIL REDACTED]', text)
+
+    # 3. CNIC pattern: XXXXX-XXXXXXX-X
     cnic_pattern = r'\b\d{5}-\d{7}-\d{1}\b'
     text = re.sub(cnic_pattern, '[CNIC REDACTED]', text)
 
-    # Pakistani Phone Numbers: 03XX-XXXXXXX or +923XXXXXXXXX
-    phone_pattern = r'(\+92|0)?3\d{2}[-\s]?\d{7}\b'
+    # 4. Property Owner Records & Citizen Identity Patterns
+    property_owner_patterns = [
+        r'(?i)\b(?:Property\s*Owner|Plot\s*Owner|Owner\s*Name|Applicant\s*Name|Citizen\s*Name|Owner\s*CNIC|Owner\s*Phone|Owner\s*Contact)\s*[:=-]\s*([A-Za-z\s\.\,\'\-]+?)(?=[,\n\r\.\;]|\b(?:Plot|Sector|Phase|CNIC|Phone|Address|FAR|Height|Fee)\b|$)',
+        r'(?i)\b(?:S\/O|D\/O|W\/O|s\/o|d\/o|w\/o)\s+([A-Za-z\s\.\,\'\-]+?)(?=[,\n\r\.\;]|\b(?:CNIC|Phone|Plot|Address|Resident)\b|$)',
+        r'(?i)\b(?:Ownership\s*Title\s*Registered\s*To|Transferred\s*To|Allotted\s*To)\s*[:=-]?\s*([A-Za-z\s\.\,\'\-]+?)(?=[,\n\r\.\;]|$)'
+    ]
+    for pat in property_owner_patterns:
+        text = re.sub(pat, '[PROPERTY OWNER REDACTED]', text)
+
+    # 5. Pakistani Phone Numbers: +923..., 03..., 042-...
+    phone_pattern = r'\b(?:\+92|0092|0)(?:3\d{2}|42|51|21)[-\s]?\d{7,8}\b'
     text = re.sub(phone_pattern, '[PHONE REDACTED]', text)
 
     return text
