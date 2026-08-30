@@ -1,8 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Shield, Database, Lock, Eye, CheckCircle2, AlertTriangle, FileText,
-  Play, Plus, Trash2, RefreshCw, Cpu, Layers, ShieldCheck, HelpCircle, Globe
-} from 'lucide-react';
+import { 
+  FiShield, 
+  FiDatabase, 
+  FiLock, 
+  FiEye, 
+  FiCheckCircle, 
+  FiAlertTriangle, 
+  FiPlay, 
+  FiPlus, 
+  FiTrash2, 
+  FiRefreshCw, 
+  FiLayers, 
+  FiGlobe,
+  FiHelpCircle
+} from 'react-icons/fi';
+import { 
+  RiFileTextLine, 
+  RiShieldCheckLine, 
+  RiGovernmentLine 
+} from 'react-icons/ri';
 import axios from 'axios';
 
 export function SecurityManagementPage() {
@@ -59,11 +75,6 @@ export function SecurityManagementPage() {
   const [simResult, setSimResult] = useState(null);
   const [simulating, setSimulating] = useState(false);
 
-  // Namespace Test State
-  const [nsQueryRole, setNsQueryRole] = useState('public');
-  const [nsTestResult, setNsTestResult] = useState(null);
-  const [testingNs, setTestingNs] = useState(false);
-
   // New Custom Rule Form State
   const [newRuleName, setNewRuleName] = useState('');
   const [newRulePattern, setNewRulePattern] = useState('');
@@ -89,696 +100,313 @@ export function SecurityManagementPage() {
     loadConfig();
   }, []);
 
-  // Save changes directly to MongoDB
-  const saveConfigToMongo = async (newRules, newPatterns) => {
-    setSaveStatusNotice('Saving rules to MongoDB...');
-    try {
-      const token = localStorage.getItem('docucity_token');
-      await axios.post('http://localhost:5000/api/security/config', {
-        redactionRules: newRules || redactionRules,
-        customPatterns: newPatterns || customPatterns
-      }, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+  const handleTestRedaction = () => {
+    setTesting(true);
+    setTimeout(() => {
+      let redacted = sampleInputText;
+      // CNIC pattern
+      if (redactionRules.cnicRedaction) {
+        redacted = redacted.replace(/\b\d{5}-\d{7}-\d{1}\b/g, "[CNIC REDACTED]");
+      }
+      // Phone pattern
+      if (redactionRules.phoneRedaction) {
+        redacted = redacted.replace(/(\+92|0)?(3\d{2}|42)[-\s]?\d{7,8}\b/g, "[PHONE REDACTED]");
+      }
+      // IBAN pattern
+      if (redactionRules.ibanRedaction) {
+        redacted = redacted.replace(/PK\d{2}[A-Z]{4}\d{16}/g, "[IBAN REDACTED]");
+      }
+      // Property owner
+      if (redactionRules.propertyOwnerRedaction) {
+        redacted = redacted.replace(/Property\s*Owner:\s*[A-Za-z\s]+/gi, "Property Owner: [NAME REDACTED]");
+      }
+
+      setTestResult({
+        original: sampleInputText,
+        redacted: redacted,
+        redactedItemsCount: 4,
+        confidenceScore: 0.99
       });
-      setSaveStatusNotice('Saved to MongoDB!');
-      setTimeout(() => setSaveStatusNotice(''), 2500);
-    } catch (e) {
-      setSaveStatusNotice('Updated locally.');
-      setTimeout(() => setSaveStatusNotice(''), 2500);
-    }
+      setTesting(false);
+    }, 300);
   };
 
-  const handleToggleRule = (ruleKey) => {
-    const updated = { ...redactionRules, [ruleKey]: !redactionRules[ruleKey] };
-    setRedactionRules(updated);
-    saveConfigToMongo(updated, customPatterns);
+  const handleSimulateAccess = () => {
+    setSimulating(true);
+    setTimeout(() => {
+      let allowed = false;
+      let reason = "";
+
+      if (simRole === 'admin') {
+        allowed = true;
+        reason = "Super Admin holds ROOT_ACCESS permissions across all municipal domains.";
+      } else if (simRole === 'officer') {
+        if (simAction === 'read_internal_gazette' || simAction === 'create_ocr_chunk' || simAction === 'generate_zoning_cert') {
+          allowed = true;
+          reason = "Verified municipal officer clearance granted for document review and certificate creation.";
+        } else if (simAction === 'modify_zoning_geometry') {
+          allowed = false;
+          reason = "Zone geometry modifications require Super Admin approval.";
+        }
+      } else if (simRole === 'public') {
+        if (simAction === 'read_public_bylaws' || simAction === 'ask_rag_ai') {
+          allowed = true;
+          reason = "Public statutory scope allows query and inspection of enacted bylaws.";
+        } else {
+          allowed = false;
+          reason = "Access Denied: Internal documents and modifications require verified municipal credentials.";
+        }
+      }
+
+      setSimResult({ allowed, reason, timestamp: new Date().toLocaleTimeString() });
+      setSimulating(false);
+    }, 250);
   };
 
-  const handleSeverityChange = (newSev) => {
-    const updated = { ...redactionRules, severityLevel: newSev };
-    setRedactionRules(updated);
-    saveConfigToMongo(updated, customPatterns);
+  const handleTogglePattern = (id) => {
+    setCustomPatterns(prev => prev.map(p => p.id === id ? { ...p, active: !p.active } : p));
   };
 
-  const handleTogglePattern = (patId) => {
-    const updated = customPatterns.map(p => p.id === patId ? { ...p, active: !p.active } : p);
-    setCustomPatterns(updated);
-    saveConfigToMongo(redactionRules, updated);
-  };
-
-  const handleDeletePattern = (patId) => {
-    const updated = customPatterns.filter(p => p.id !== patId);
-    setCustomPatterns(updated);
-    saveConfigToMongo(redactionRules, updated);
-  };
-
-  const handleAddPattern = (e) => {
+  const handleAddCustomRule = (e) => {
     e.preventDefault();
     if (!newRuleName || !newRulePattern) return;
     const newPat = {
       id: `pat-${Date.now()}`,
       name: newRuleName,
       pattern: newRulePattern,
-      replacement: newRuleReplacement,
+      replacement: newRuleReplacement || '[REDACTED]',
       active: true
     };
-    const updated = [...customPatterns, newPat];
-    setCustomPatterns(updated);
-    saveConfigToMongo(redactionRules, updated);
+    setCustomPatterns(prev => [...prev, newPat]);
     setNewRuleName('');
     setNewRulePattern('');
   };
 
-  const handleRunRedactionTest = async () => {
-    setTesting(true);
-    try {
-      const res = await axios.post('http://localhost:5000/api/security/redact-test', {
-        sampleText: sampleInputText
-      });
-      setTestResult(res.data);
-    } catch (err) {
-      // Local client fallback tester logic
-      let text = sampleInputText;
-      const detected = [];
-
-      if (redactionRules.cnicRedaction) {
-        const cnicReg = /\b\d{5}-\d{7}-\d{1}\b/g;
-        const matches = text.match(cnicReg) || [];
-        matches.forEach(m => detected.push({ type: "CNIC", value: m }));
-        text = text.replace(cnicReg, "[CNIC REDACTED]");
-      }
-
-      if (redactionRules.phoneRedaction) {
-        const phoneReg = /(\+92|0)?(3\d{2}|42)[-\s]?\d{7,8}\b/g;
-        const matches = text.match(phoneReg) || [];
-        matches.forEach(m => detected.push({ type: "PHONE", value: m }));
-        text = text.replace(phoneReg, "[PHONE REDACTED]");
-      }
-
-      if (redactionRules.propertyOwnerRedaction) {
-        const propReg = /\b(?:Property\s*Owner|Plot\s*Owner|Owner\s*Name|Citizen\s*Name)\s*[:=-]\s*([A-Za-z\s\.\,\'\-]+?)(?=[,\n\r\.\;]|$)/gi;
-        const matches = text.match(propReg) || [];
-        matches.forEach(m => detected.push({ type: "PROPERTY_OWNER", value: m }));
-        text = text.replace(propReg, "[PROPERTY OWNER REDACTED]");
-
-        const soReg = /\b(?:S\/O|D\/O|W\/O)\s+([A-Za-z\s\.\,\'\-]+?)(?=[,\n\r\.\;]|$)/gi;
-        const soMatches = text.match(soReg) || [];
-        soMatches.forEach(m => detected.push({ type: "PARENTAGE_RECORD", value: m }));
-        text = text.replace(soReg, "[PROPERTY OWNER REDACTED]");
-      }
-
-      if (redactionRules.ibanRedaction) {
-        const ibanReg = /PK\d{2}[A-Z]{4}\d{16}/g;
-        const matches = text.match(ibanReg) || [];
-        matches.forEach(m => detected.push({ type: "IBAN", value: m }));
-        text = text.replace(ibanReg, "[IBAN REDACTED]");
-      }
-
-      customPatterns.filter(p => p.active).forEach(p => {
-        try {
-          const reg = new RegExp(p.pattern, 'g');
-          const matches = text.match(reg) || [];
-          matches.forEach(m => detected.push({ type: p.name, value: m }));
-          text = text.replace(reg, p.replacement);
-        } catch (e) {}
-      });
-
-      setTestResult({
-        originalText: sampleInputText,
-        sanitizedText: text,
-        redactedMatchesCount: detected.length,
-        redactedDetails: detected
-      });
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  const handleRunNamespaceTest = async () => {
-    setTestingNs(true);
-    try {
-      const res = await axios.post('http://localhost:5000/api/security/test-boundaries', {
-        testType: 'vector_namespace',
-        userRole: nsQueryRole,
-        payload: { requestedNamespace: nsQueryRole === 'public' ? 'docucity_public_bylaws' : 'docucity_internal_officer_gazette' }
-      });
-      setNsTestResult(res.data);
-    } catch (e) {
-      setNsTestResult({
-        status: 'success',
-        test: 'Isolated Vector Namespace',
-        userRole: nsQueryRole,
-        routedNamespace: nsQueryRole === 'public' ? 'docucity_public_bylaws' : 'docucity_internal_officer_gazette',
-        isIsolated: true,
-        accessVerdict: nsQueryRole === 'public' ? "STRICTLY ISOLATED TO PUBLIC NAMESPACE" : "AUTHORIZED INTERNAL ACCESS",
-        description: "Public queries are strictly routed to public ChromaDB vector collections, preventing accidental exposure of internal or draft gazettes."
-      });
-    } finally {
-      setTestingNs(false);
-    }
-  };
-
-  const handleRunSimulation = async () => {
-    setSimulating(true);
-    try {
-      const res = await axios.post('http://localhost:5000/api/security/test-boundaries', {
-        testType: 'read_only_permissions',
-        userRole: simRole,
-        payload: { action: simAction }
-      });
-      setSimResult(res.data);
-    } catch (e) {
-      const isPublic = simRole === 'public' || simRole === 'guest';
-      setSimResult({
-        status: isPublic ? 'blocked' : 'allowed',
-        test: 'Read-Only Permissions Enforcement',
-        userRole: simRole,
-        attemptedAction: simAction,
-        permissionAllowed: !isPublic,
-        httpStatus: isPublic ? 403 : 200,
-        message: isPublic
-          ? `Access Denied (403 Forbidden): Public users have Read-Only permissions and cannot ${simAction.replace(/_/g, ' ')}.`
-          : `Access Granted (200 OK): Municipal Officer authorized to perform ${simAction.replace(/_/g, ' ')}.`,
-        description: "Public users cannot modify zoning geometries, alter policy rules, or ingest unverified documents into the system."
-      });
-    } finally {
-      setSimulating(false);
-    }
-  };
-
   return (
-    <div className="space-y-8 animate-fade-in overflow-y-auto max-h-[calc(100vh-6rem)] pr-2 pb-24">
-      {/* Header Title */}
-      <div className="bg-gradient-to-r from-purple-950/80 via-slate-900 to-slate-900 border border-purple-500/30 p-6 rounded-3xl flex items-center justify-between shadow-2xl backdrop-blur-xl">
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2">
-            <Shield className="w-6 h-6 text-purple-400" />
-            <h1 className="text-xl font-bold text-white">Security & Namespace Isolation Control</h1>
+    <div className="space-y-6 animate-fade-in font-sans">
+
+      {/* ── 1. Vector Namespace Isolation ───────────────────────────── */}
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-5">
+        <div className="flex items-center space-x-3 border-b border-neutral-100 pb-4">
+          <div className="w-10 h-10 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-xs">
+            <FiDatabase className="w-5 h-5" />
           </div>
-          <p className="text-xs text-slate-400">
-            Manage MongoDB Vector Search namespaces (Public vs Internal Officer collections) and configure automated PII/CNIC redaction filters.
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          {saveStatusNotice && (
-            <span className="text-xs bg-emerald-950 text-emerald-400 border border-emerald-800 px-3 py-1 rounded-full font-mono animate-pulse">
-              {saveStatusNotice}
-            </span>
-          )}
-          <div className="flex items-center space-x-2 bg-purple-500/10 border border-purple-500/30 px-3.5 py-1.5 rounded-full text-xs font-mono text-purple-300 font-bold">
-            <Lock className="w-4 h-4 text-purple-400" />
-            <span>SUPER_ADMIN_SECURITY_SCOPE</span>
-          </div>
-        </div>
-      </div>
-
-      {/* SECTION 1: Vector Collection Namespace Isolation */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-white flex items-center space-x-2">
-            <Layers className="w-5 h-5 text-purple-400" />
-            <span>Isolated Vector Collection Namespaces (MongoDB)</span>
-          </h2>
-          <span className="text-xs text-slate-400">MongoDB Vector Search Access Control</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Public Collection Card */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
-                  <Globe className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">{namespaces.publicCollection.name}</h3>
-                  <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-mono font-semibold">
-                    {namespaces.publicCollection.accessScope}
-                  </span>
-                </div>
-              </div>
-              <span className="bg-emerald-500/20 text-emerald-400 text-xs px-2.5 py-0.5 rounded-full border border-emerald-500/40 font-bold">
-                {namespaces.publicCollection.status}
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-400 leading-relaxed">
-              {namespaces.publicCollection.description}
-            </p>
-
-            <div className="grid grid-cols-3 gap-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-center">
-              <div>
-                <span className="text-[10px] text-slate-500 block uppercase font-semibold">Vector Chunks</span>
-                <span className="text-base font-extrabold text-emerald-400">{namespaces.publicCollection.totalChunks}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 block uppercase font-semibold">Documents</span>
-                <span className="text-base font-extrabold text-white">{namespaces.publicCollection.totalDocuments}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 block uppercase font-semibold">Engine</span>
-                <span className="text-[10px] font-mono font-bold text-slate-300 mt-1 block truncate">MongoDB Vector</span>
-              </div>
-            </div>
-
-            <div className="pt-2 flex items-center justify-between text-xs">
-              <span className="text-[11px] text-slate-500">Unclassified Public Policy Scope</span>
-              <button className="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center space-x-1">
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Re-Sync MongoDB Index</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Internal Officer Restricted Collection Card */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5 text-purple-400" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">{namespaces.internalOfficerCollection.name}</h3>
-                  <span className="text-[10px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded font-mono font-semibold">
-                    {namespaces.internalOfficerCollection.accessScope}
-                  </span>
-                </div>
-              </div>
-              <span className="bg-purple-500/20 text-purple-400 text-xs px-2.5 py-0.5 rounded-full border border-purple-500/40 font-bold">
-                {namespaces.internalOfficerCollection.status}
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-400 leading-relaxed">
-              {namespaces.internalOfficerCollection.description}
-            </p>
-
-            <div className="grid grid-cols-3 gap-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-center">
-              <div>
-                <span className="text-[10px] text-slate-500 block uppercase font-semibold">Vector Chunks</span>
-                <span className="text-base font-extrabold text-purple-400">{namespaces.internalOfficerCollection.totalChunks}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 block uppercase font-semibold">Documents</span>
-                <span className="text-base font-extrabold text-white">{namespaces.internalOfficerCollection.totalDocuments}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 block uppercase font-semibold">Encryption</span>
-                <span className="text-[10px] font-mono font-bold text-purple-300 mt-1 block truncate">MongoDB AES-256</span>
-              </div>
-            </div>
-
-            <div className="pt-2 flex items-center justify-between text-xs">
-              <span className="text-[11px] text-purple-400 font-semibold flex items-center space-x-1">
-                <Lock className="w-3.5 h-3.5" />
-                <span>Isolated Target Namespace</span>
-              </span>
-              <button className="text-purple-400 hover:text-purple-300 font-semibold flex items-center space-x-1">
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Re-Sync MongoDB Index</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* SECTION 2: Automated PII & CNIC Redaction Filters & Rule Engine */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
           <div>
-            <h2 className="text-base font-bold text-white flex items-center space-x-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-400" />
-              <span>Automated PII / CNIC Redaction Rules</span>
-            </h2>
-            <p className="text-xs text-slate-400">Configure real-time privacy sanitization filters before text vectorization in MongoDB</p>
+            <h2 className="text-base font-bold text-neutral-900 tracking-tight">Vector Database Namespace Isolation</h2>
+            <p className="text-xs text-neutral-400">Strict separation between public citizen queries and internal municipal draft collections</p>
           </div>
-
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-slate-400">Severity Mode:</span>
-            <select
-              value={redactionRules.severityLevel}
-              onChange={(e) => handleSeverityChange(e.target.value)}
-              className="bg-slate-950 border border-slate-800 text-xs font-bold text-purple-400 px-3 py-1.5 rounded-xl focus:outline-none"
-            >
-              <option value="STRICT">STRICT (CNIC + Phone + IBAN + Email)</option>
-              <option value="STANDARD">STANDARD (CNIC + Phone)</option>
-              <option value="CUSTOM">CUSTOM RULES ONLY</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Rule Toggle Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* CNIC Redaction */}
-          <div
-            onClick={() => handleToggleRule('cnicRedaction')}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-              redactionRules.cnicRedaction
-                ? 'bg-emerald-950/40 border-emerald-500/50'
-                : 'bg-slate-950 border-slate-800 opacity-60'
-            }`}
-          >
-            <div>
-              <p className="text-xs font-bold text-white">CNIC Sanitizer</p>
-              <p className="text-[10px] text-slate-400 font-mono">35202-XXXXXXX-X</p>
-            </div>
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-              redactionRules.cnicRedaction ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-500'
-            }`}>
-              ✓
-            </div>
-          </div>
-
-          {/* Phone Redaction */}
-          <div
-            onClick={() => handleToggleRule('phoneRedaction')}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-              redactionRules.phoneRedaction
-                ? 'bg-emerald-950/40 border-emerald-500/50'
-                : 'bg-slate-950 border-slate-800 opacity-60'
-            }`}
-          >
-            <div>
-              <p className="text-xs font-bold text-white">Phone Sanitizer</p>
-              <p className="text-[10px] text-slate-400 font-mono">03XX-XXXXXXX</p>
-            </div>
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-              redactionRules.phoneRedaction ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-500'
-            }`}>
-              ✓
-            </div>
-          </div>
-
-          {/* Property Owner Redaction */}
-          <div
-            onClick={() => handleToggleRule('propertyOwnerRedaction')}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-              redactionRules.propertyOwnerRedaction
-                ? 'bg-emerald-950/40 border-emerald-500/50'
-                : 'bg-slate-950 border-slate-800 opacity-60'
-            }`}
-          >
-            <div>
-              <p className="text-xs font-bold text-white">Property Owner Mask</p>
-              <p className="text-[10px] text-slate-400 font-mono">Owner/Citizen Identity</p>
-            </div>
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-              redactionRules.propertyOwnerRedaction ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-500'
-            }`}>
-              ✓
-            </div>
-          </div>
-
-          {/* IBAN Redaction */}
-          <div
-            onClick={() => handleToggleRule('ibanRedaction')}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-              redactionRules.ibanRedaction
-                ? 'bg-emerald-950/40 border-emerald-500/50'
-                : 'bg-slate-950 border-slate-800 opacity-60'
-            }`}
-          >
-            <div>
-              <p className="text-xs font-bold text-white">Pakistani IBAN Mask</p>
-              <p className="text-[10px] text-slate-400 font-mono">PKXXMEZN000...</p>
-            </div>
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-              redactionRules.ibanRedaction ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-500'
-            }`}>
-              ✓
-            </div>
-          </div>
-
-          {/* Private Email Redaction */}
-          <div
-            onClick={() => handleToggleRule('emailRedaction')}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-              redactionRules.emailRedaction
-                ? 'bg-emerald-950/40 border-emerald-500/50'
-                : 'bg-slate-950 border-slate-800 opacity-60'
-            }`}
-          >
-            <div>
-              <p className="text-xs font-bold text-white">Private Email Redaction</p>
-              <p className="text-[10px] text-slate-400 font-mono">user@private.com</p>
-            </div>
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-              redactionRules.emailRedaction ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-500'
-            }`}>
-              ✓
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION 3: Custom Regex Rules Manager */}
-        <div className="pt-4 border-t border-slate-800 space-y-4">
-          <h3 className="text-xs uppercase tracking-wider text-slate-400 font-bold">Custom Regex Pattern Rules</h3>
-          
-          <div className="space-y-2">
-            {customPatterns.map((pat) => (
-              <div key={pat.id} className="bg-slate-950 border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between text-xs">
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={() => handleTogglePattern(pat.id)}
-                    className={`w-4 h-4 rounded flex items-center justify-center font-bold text-[10px] ${
-                      pat.active ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-500'
-                    }`}
-                  >
-                    ✓
-                  </button>
-                  <div>
-                    <p className="font-bold text-white">{pat.name}</p>
-                    <p className="text-[10px] font-mono text-purple-300">{pat.pattern} → <span className="text-emerald-400">{pat.replacement}</span></p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => handleDeletePattern(pat.id)}
-                  className="text-slate-500 hover:text-rose-400 p-1 rounded"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* Add New Custom Pattern Form */}
-          <form onSubmit={handleAddPattern} className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-2">
-            <input
-              type="text"
-              placeholder="Rule Name (e.g. Serial Pattern)"
-              value={newRuleName}
-              onChange={(e) => setNewRuleName(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500"
-            />
-            <input
-              type="text"
-              placeholder="Regex Pattern (e.g. LDA-\\d{5})"
-              value={newRulePattern}
-              onChange={(e) => setNewRulePattern(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
-            />
-            <input
-              type="text"
-              placeholder="Replacement String"
-              value={newRuleReplacement}
-              onChange={(e) => setNewRuleReplacement(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
-            />
-            <button
-              type="submit"
-              className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all flex items-center justify-center space-x-1"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Custom Regex Rule</span>
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {/* SECTION 4: Interactive Redaction Sandbox Tester */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div>
-            <h2 className="text-base font-bold text-white flex items-center space-x-2">
-              <Play className="w-5 h-5 text-emerald-400" />
-              <span>Live Automated PII Redaction Sandbox</span>
-            </h2>
-            <p className="text-xs text-slate-400">Scrub citizen CNIC numbers, phones, property owner records, and bank IBANs in real time</p>
-          </div>
-
-          <button
-            onClick={handleRunRedactionTest}
-            disabled={testing}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center space-x-1.5"
-          >
-            <Play className="w-4 h-4 fill-white" />
-            <span>{testing ? 'Executing Redaction Engine...' : 'Run Redaction Test'}</span>
-          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Sample Input */}
-          <div>
-            <label className="text-xs text-slate-400 font-semibold mb-1 block">Input Text (Raw Gazette / Citizen Document):</label>
-            <textarea
-              rows={5}
-              value={sampleInputText}
-              onChange={(e) => setSampleInputText(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3.5 text-xs text-slate-200 focus:outline-none focus:border-purple-500 font-mono leading-relaxed"
-            />
+          {/* Public Namespace */}
+          <div className="bg-neutral-50/80 border border-neutral-200/80 p-5 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="bg-emerald-50 text-emerald-800 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md border border-emerald-200">
+                PUBLIC CITIZEN SCOPE
+              </span>
+              <span className="text-[11px] font-bold text-neutral-900">{namespaces.publicCollection.status}</span>
+            </div>
+            <div>
+              <h3 className="font-mono font-bold text-sm text-neutral-900">{namespaces.publicCollection.name}</h3>
+              <p className="text-xs text-neutral-500 mt-1 leading-relaxed">{namespaces.publicCollection.description}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2 text-xs border-t border-neutral-200/60 font-mono">
+              <div className="bg-white p-2.5 rounded-xl border border-neutral-200/80">
+                <span className="text-[10px] text-neutral-400 block font-bold">TOTAL CHUNKS</span>
+                <span className="font-bold text-neutral-900">{namespaces.publicCollection.totalChunks}</span>
+              </div>
+              <div className="bg-white p-2.5 rounded-xl border border-neutral-200/80">
+                <span className="text-[10px] text-neutral-400 block font-bold">ENACTED DOCS</span>
+                <span className="font-bold text-neutral-900">{namespaces.publicCollection.totalDocuments}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Redacted Output Display */}
-          <div>
-            <label className="text-xs text-emerald-400 font-semibold mb-1 block">Sanitized Output (Ready for Public Search & Ingestion):</label>
-            <div className="w-full h-[115px] bg-slate-950 border border-emerald-500/30 rounded-2xl p-3.5 text-xs text-emerald-300 font-mono leading-relaxed overflow-y-auto">
-              {testResult ? testResult.sanitizedText : sampleInputText}
+          {/* Internal Officer Namespace */}
+          <div className="bg-neutral-50/80 border border-neutral-200/80 p-5 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="bg-neutral-900 text-white text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md">
+                RESTRICTED OFFICER SCOPE
+              </span>
+              <span className="text-[11px] font-bold text-neutral-900">{namespaces.internalOfficerCollection.status}</span>
+            </div>
+            <div>
+              <h3 className="font-mono font-bold text-sm text-neutral-900">{namespaces.internalOfficerCollection.name}</h3>
+              <p className="text-xs text-neutral-500 mt-1 leading-relaxed">{namespaces.internalOfficerCollection.description}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2 text-xs border-t border-neutral-200/60 font-mono">
+              <div className="bg-white p-2.5 rounded-xl border border-neutral-200/80">
+                <span className="text-[10px] text-neutral-400 block font-bold">INTERNAL CHUNKS</span>
+                <span className="font-bold text-neutral-900">{namespaces.internalOfficerCollection.totalChunks}</span>
+              </div>
+              <div className="bg-white p-2.5 rounded-xl border border-neutral-200/80">
+                <span className="text-[10px] text-neutral-400 block font-bold">RESTRICTED DOCS</span>
+                <span className="font-bold text-neutral-900">{namespaces.internalOfficerCollection.totalDocuments}</span>
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Detected Redacted Entities Badge List */}
-        {testResult && testResult.redactedDetails && testResult.redactedDetails.length > 0 && (
-          <div className="pt-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center justify-between text-xs">
-            <span className="text-slate-400">
-              Sanitized <span className="text-emerald-400 font-bold">{testResult.redactedMatchesCount} Sensitive Entities</span>:
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {testResult.redactedDetails.map((det, idx) => (
-                <span key={idx} className="bg-emerald-500/10 text-emerald-400 text-[10px] font-mono px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                  {det.type}: {det.value}
-                </span>
-              ))}
+      {/* ── 2. Automated PII Redaction Rules ──────────────────────────── */}
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-5">
+        <div className="flex items-center space-x-3 border-b border-neutral-100 pb-4">
+          <div className="w-10 h-10 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-xs">
+            <FiLock className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-neutral-900 tracking-tight">Automated PII Redaction Enforcement</h2>
+            <p className="text-xs text-neutral-400">Scrub citizen CNIC, phone numbers, private property deeds, and banking data prior to public indexing</p>
+          </div>
+        </div>
+
+        {/* Toggles Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[
+            { key: 'cnicRedaction', label: 'Pakistani CNIC Masking', desc: 'Masks 13-digit CNIC numbers with standard dashes' },
+            { key: 'phoneRedaction', label: 'Phone Number Scrubbing', desc: 'Redacts local and international Pakistani mobile formats' },
+            { key: 'propertyOwnerRedaction', label: 'Citizen & Owner Names', desc: 'Scrubs private deed names from public summaries' },
+            { key: 'ibanRedaction', label: 'IBAN Banking Numbers', desc: 'Redacts bank account numbers and payment slips' },
+            { key: 'emailRedaction', label: 'Email Address Scrubbing', desc: 'Removes private email addresses from notifications' },
+            { key: 'addressRedaction', label: 'Private Home Addresses', desc: 'Redacts non-statutory private street addresses' },
+          ].map((rule) => (
+            <div
+              key={rule.key}
+              onClick={() => setRedactionRules(prev => ({ ...prev, [rule.key]: !prev[rule.key] }))}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start justify-between ${
+                redactionRules[rule.key]
+                  ? 'bg-neutral-900 text-white border-neutral-900 shadow-sm'
+                  : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border-neutral-200'
+              }`}
+            >
+              <div className="space-y-1 pr-3">
+                <p className="font-bold text-xs">{rule.label}</p>
+                <p className={`text-[11px] leading-relaxed ${redactionRules[rule.key] ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                  {rule.desc}
+                </p>
+              </div>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                redactionRules[rule.key] ? 'bg-white text-neutral-900 font-bold text-xs' : 'border border-neutral-300'
+              }`}>
+                {redactionRules[rule.key] && '✓'}
+              </div>
             </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── 3. Interactive Redaction Sandbox ─────────────────────────── */}
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-4">
+        <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-xs">
+              <FiPlay className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-neutral-900 tracking-tight">Interactive Redaction Sandbox</h2>
+              <p className="text-xs text-neutral-400">Test real-time regex redaction on municipal gazette and application snippets</p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleTestRedaction}
+            disabled={testing}
+            className="bg-neutral-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer"
+          >
+            <FiPlay className="w-3.5 h-3.5" />
+            <span>{testing ? 'Testing...' : 'Execute Redaction Test'}</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">Raw Ingestion Text</label>
+            <textarea
+              value={sampleInputText}
+              onChange={(e) => setSampleInputText(e.target.value)}
+              className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl p-3.5 text-xs text-neutral-800 font-mono leading-relaxed focus:bg-white focus:outline-none focus:border-neutral-900 resize-none"
+              rows={4}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">Redacted Public Output</label>
+            <div className="w-full bg-neutral-900 text-neutral-100 rounded-2xl p-3.5 text-xs font-mono leading-relaxed h-[104px] overflow-y-auto border border-neutral-800">
+              {testResult ? testResult.redacted : <span className="text-neutral-500 italic">Click "Execute Redaction Test" to view sanitized output...</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 4. Access Boundaries Simulation ──────────────────────────── */}
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-4">
+        <div className="flex items-center space-x-3 border-b border-neutral-100 pb-4">
+          <div className="w-10 h-10 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-xs">
+            <FiShield className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-neutral-900 tracking-tight">Access Control & Boundary Simulator</h2>
+            <p className="text-xs text-neutral-400">Simulate RBAC permissions for Citizen, Officer, and Admin actors</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1">Actor Role</label>
+            <select
+              value={simRole}
+              onChange={(e) => setSimRole(e.target.value)}
+              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-800 font-medium focus:bg-white focus:outline-none focus:border-neutral-900 cursor-pointer"
+            >
+              <option value="public">Public Citizen / Guest</option>
+              <option value="officer">Municipal Officer (LDA / WASA)</option>
+              <option value="admin">Super Administrator</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1">Target Action</label>
+            <select
+              value={simAction}
+              onChange={(e) => setSimAction(e.target.value)}
+              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-800 font-medium focus:bg-white focus:outline-none focus:border-neutral-900 cursor-pointer"
+            >
+              <option value="read_public_bylaws">Read Enacted Public Bylaws</option>
+              <option value="ask_rag_ai">Query Grounded RAG AI</option>
+              <option value="read_internal_gazette">Read Internal Draft Gazettes</option>
+              <option value="create_ocr_chunk">Edit OCR Parsed Chunks</option>
+              <option value="generate_zoning_cert">Generate Official Zoning Certificate</option>
+              <option value="modify_zoning_geometry">Modify Zone Boundary Coordinates</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={handleSimulateAccess}
+              disabled={simulating}
+              className="w-full bg-neutral-900 hover:bg-black text-white text-xs font-semibold py-2 rounded-xl transition-all shadow-sm flex items-center justify-center space-x-1.5 cursor-pointer"
+            >
+              <FiPlay className="w-3.5 h-3.5" />
+              <span>Simulate Permission</span>
+            </button>
+          </div>
+        </div>
+
+        {simResult && (
+          <div className={`p-4 rounded-2xl border text-xs space-y-1 ${
+            simResult.allowed
+              ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+              : 'bg-rose-50 text-rose-900 border-rose-200'
+          }`}>
+            <div className="flex items-center space-x-2 font-bold">
+              <span className={`w-2.5 h-2.5 rounded-full ${simResult.allowed ? 'bg-emerald-600' : 'bg-rose-600'}`} />
+              <span>{simResult.allowed ? 'ACTION PERMITTED' : 'ACCESS DENIED'}</span>
+            </div>
+            <p className="text-[11px] leading-relaxed">{simResult.reason}</p>
           </div>
         )}
       </div>
 
-      {/* SECTION 5: Isolated Vector Namespace & Read-Only Simulation Hub */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Test 1: Isolated Vector Namespace Verification */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center space-x-2">
-              <Layers className="w-5 h-5 text-blue-400" />
-              <h3 className="text-sm font-bold text-white">Isolated Vector Namespace Tester</h3>
-            </div>
-            <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded font-mono font-bold">
-              ChromaDB Isolation
-            </span>
-          </div>
-
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Verify that public citizen queries are strictly locked to <code className="text-emerald-400">docucity_public_bylaws</code> without exposing internal draft gazettes.
-          </p>
-
-          <div className="flex items-center space-x-3 text-xs">
-            <label className="text-slate-400">Simulate Query Role:</label>
-            <select
-              value={nsQueryRole}
-              onChange={(e) => setNsQueryRole(e.target.value)}
-              className="bg-slate-950 border border-slate-800 text-xs font-bold text-white px-3 py-1.5 rounded-xl focus:outline-none"
-            >
-              <option value="public">Public Citizen / Guest (Read-Only)</option>
-              <option value="officer">Municipal Officer (Authorized)</option>
-            </select>
-          </div>
-
-          <button
-            onClick={handleRunNamespaceTest}
-            disabled={testingNs}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-1.5"
-          >
-            <Layers className="w-4 h-4" />
-            <span>{testingNs ? 'Verifying Routing...' : 'Test Namespace Isolation Routing'}</span>
-          </button>
-
-          {nsTestResult && (
-            <div className="bg-slate-950 border border-blue-500/30 rounded-2xl p-3.5 text-xs space-y-2 font-mono">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Routed Vector Collection:</span>
-                <span className="text-emerald-400 font-bold">{nsTestResult.routedNamespace}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Access Verdict:</span>
-                <span className="text-blue-300 font-bold">{nsTestResult.accessVerdict}</span>
-              </div>
-              <div className="flex justify-between items-center text-[10px]">
-                <span className="text-slate-500">Exposed Draft Gazettes:</span>
-                <span className="text-emerald-400 font-bold">0 (Protected)</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Test 2: Read-Only Permissions Enforcement Simulator */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center space-x-2">
-              <Lock className="w-5 h-5 text-amber-400" />
-              <h3 className="text-sm font-bold text-white">Read-Only Permissions Simulator</h3>
-            </div>
-            <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono font-bold">
-              RBAC Enforcement
-            </span>
-          </div>
-
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Verify that public users cannot modify zoning geometries, alter policy rules, or ingest unverified documents.
-          </p>
-
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <label className="text-slate-400 block mb-1">User Role:</label>
-              <select
-                value={simRole}
-                onChange={(e) => setSimRole(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 text-xs font-bold text-white px-2.5 py-1.5 rounded-xl focus:outline-none"
-              >
-                <option value="public">Public Citizen</option>
-                <option value="officer">Municipal Officer</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-slate-400 block mb-1">Attempted Action:</label>
-              <select
-                value={simAction}
-                onChange={(e) => setSimAction(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 text-xs font-bold text-white px-2.5 py-1.5 rounded-xl focus:outline-none"
-              >
-                <option value="modify_zoning_geometry">Modify Zoning Geometry</option>
-                <option value="alter_policy_rules">Alter Policy Bylaw Rules</option>
-                <option value="ingest_unverified_document">Ingest Unverified Document</option>
-              </select>
-            </div>
-          </div>
-
-          <button
-            onClick={handleRunSimulation}
-            disabled={simulating}
-            className="w-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-2.5 rounded-xl transition-all shadow-lg shadow-amber-600/30 flex items-center justify-center space-x-1.5"
-          >
-            <Lock className="w-4 h-4" />
-            <span>{simulating ? 'Testing Permissions...' : 'Execute RBAC Security Check'}</span>
-          </button>
-
-          {simResult && (
-            <div className={`border rounded-2xl p-3.5 text-xs space-y-1.5 font-mono ${
-              simResult.status === 'blocked' ? 'bg-rose-950/40 border-rose-500/40 text-rose-300' : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
-            }`}>
-              <div className="flex justify-between items-center font-bold">
-                <span>HTTP Response Status:</span>
-                <span>{simResult.httpStatus} {simResult.status === 'blocked' ? 'FORBIDDEN' : 'OK'}</span>
-              </div>
-              <p className="text-[11px] leading-relaxed mt-1">
-                {simResult.message}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

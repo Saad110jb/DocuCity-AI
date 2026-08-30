@@ -1,8 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  MessageSquare, Send, Sparkles, Bot, User, ChevronRight,
-  HelpCircle, MapPin, X, Compass, ShieldCheck, Zap, Layers, BookOpen
-} from 'lucide-react';
+import { 
+  FiMessageSquare, 
+  FiSend, 
+  FiUser, 
+  FiChevronRight, 
+  FiMapPin, 
+  FiX, 
+  FiCompass, 
+  FiShield, 
+  FiZap, 
+  FiLayers, 
+  FiBook, 
+  FiCopy, 
+  FiCheck,
+  FiHelpCircle
+} from 'react-icons/fi';
+import { 
+  RiFileTextLine, 
+  RiShieldCheckLine 
+} from 'react-icons/ri';
+import { 
+  HiOutlineSparkles 
+} from 'react-icons/hi2';
 import { CitationCard } from './CitationCard';
 import { LanguageToggle } from './LanguageToggle';
 import { PdfCitationViewerModal } from '../common/PdfCitationViewerModal';
@@ -20,6 +39,7 @@ export function ChatDrawer({
   const [inputText, setInputText] = useState('');
   const [isOpen, setIsOpen] = useState(true);
   const [activeCitationPdf, setActiveCitationPdf] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
   const messagesEndRef = useRef(null);
 
   // Auto-scroll to bottom of conversation
@@ -39,223 +59,257 @@ export function ChatDrawer({
     onSendQuery(promptText, selectedZone ? selectedZone.zone_code : null);
   };
 
+  const handleCopyText = (text, id) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const isUrdu = language === 'ur';
 
   return (
     <>
       <div
         className={`fixed right-0 top-16 bottom-0 z-20 flex transition-all duration-300 ${
-          isOpen ? 'w-[420px]' : 'w-12'
+          isOpen ? 'w-[430px]' : 'w-12'
         }`}
       >
         {/* Toggle button on left side of drawer */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="self-center bg-emerald-600 hover:bg-emerald-500 text-white p-2.5 rounded-l-2xl shadow-2xl border-y border-l border-emerald-400/40 focus:outline-none transition-all flex items-center justify-center"
+          className="self-center bg-[#18181B] hover:bg-black text-white p-2.5 rounded-l-2xl shadow-xl border-y border-l border-neutral-700/50 focus:outline-none transition-all flex items-center justify-center cursor-pointer"
           title={isOpen ? 'Collapse Assistant' : 'Expand Assistant'}
         >
-          <MessageSquare className="w-5 h-5" />
+          <FiMessageSquare className="w-5 h-5" />
         </button>
 
         {/* Drawer content */}
         {isOpen && (
-          <div className="flex-1 bg-slate-900/98 border-l border-slate-800 flex flex-col backdrop-blur-2xl shadow-2xl overflow-hidden font-sans">
+          <div className="flex-1 bg-white border-l border-neutral-200/90 flex flex-col shadow-2xl overflow-hidden font-sans">
             
-            {/* ── Drawer Header ────────────────────────────────────────────── */}
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/70 shrink-0">
-              <div className="flex items-center space-x-2.5">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 border border-emerald-400/40 flex items-center justify-center shadow-lg shadow-emerald-600/20">
-                  <Sparkles className="w-5 h-5 text-white" />
+            {/* ── Clean Drawer Header (RAG Verified text removed) ── */}
+            <div className="px-5 py-4 border-b border-neutral-200/80 flex items-center justify-between bg-white shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-2xl bg-neutral-900 flex items-center justify-center shadow-xs text-white shrink-0">
+                  <HiOutlineSparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-slate-100 flex items-center space-x-1.5">
-                    <span>RAG Bylaws Assistant</span>
-                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] px-1.5 py-0.2 rounded font-mono font-bold">
-                      Gemini 1.5
-                    </span>
+                  <h2 className="text-sm font-bold text-neutral-900 tracking-tight">
+                    Grounded AI Assistant
                   </h2>
-                  <p className="text-[10px] text-slate-400 font-mono">Grounded Legal Citations & Zero Hallucination</p>
+                  <p className="text-[10px] text-neutral-400 font-medium">
+                    Bilingual Legal Citations & Zero Hallucination
+                  </p>
                 </div>
               </div>
 
               <LanguageToggle language={language} setLanguage={setLanguage} />
             </div>
 
-            {/* ── Active Spatial Location Context Filter Banner ─────────────── */}
+            {/* Active Spatial Location Context Filter Banner */}
             {selectedZone ? (
-              <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-emerald-950/80 border-b border-emerald-500/30 px-4 py-2.5 flex items-center justify-between text-xs shrink-0 animate-fade-in">
+              <div className="bg-neutral-50 border-b border-neutral-200 px-4 py-2.5 flex items-center justify-between text-xs shrink-0 animate-fade-in">
                 <div className="flex items-center space-x-2 min-w-0">
-                  <MapPin className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
+                  <div className="w-7 h-7 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-neutral-800 shrink-0 shadow-xs">
+                    <FiMapPin className="w-4 h-4" />
+                  </div>
                   <div className="min-w-0">
-                    <div className="text-[10px] text-emerald-400 font-mono font-bold uppercase tracking-wider">
-                      Spatial Filter Active
+                    <div className="text-[10px] text-neutral-400 font-mono font-bold uppercase tracking-wider">
+                      Active Spatial Context
                     </div>
-                    <div className="font-bold text-white text-xs truncate max-w-[240px]">
+                    <div className="font-bold text-neutral-900 text-xs truncate max-w-[240px]">
                       {selectedZone.zone_name || selectedZone.name}
                     </div>
-                    <div className="text-[10px] text-slate-400 font-mono">
+                    <div className="text-[10px] text-neutral-500 font-mono">
                       {selectedZone.far ? `FAR: ${selectedZone.far}` : ''}
                       {selectedZone.max_height_ft ? ` · Height: ${selectedZone.max_height_ft}ft` : ''}
                     </div>
                   </div>
                 </div>
 
-                {onClearZone && (
-                  <button
-                    onClick={onClearZone}
-                    className="text-slate-400 hover:text-white p-1 hover:bg-slate-800 rounded-lg transition-all shrink-0 ml-2"
-                    title="Reset to City-Wide Scope"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="bg-slate-950/40 border-b border-slate-800/80 px-4 py-1.5 flex items-center justify-between text-[11px] text-slate-400 font-mono shrink-0">
-                <div className="flex items-center space-x-1.5">
-                  <Compass className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Scope: All Lahore Metropolitan District</span>
-                </div>
-                <span className="text-[10px] text-slate-500">Click map to filter</span>
-              </div>
-            )}
-
-            {/* ── Messages List ────────────────────────────────────────────── */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex space-x-2.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                <button
+                  onClick={onClearZone}
+                  className="text-neutral-400 hover:text-neutral-900 p-1.5 rounded-lg hover:bg-neutral-200/50 transition-colors cursor-pointer"
+                  title="Clear Spatial Filter"
                 >
-                  {msg.sender === 'ai' && (
-                    <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-emerald-600/30 to-blue-600/30 border border-emerald-500/40 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                      <Bot className="w-4 h-4 text-emerald-400" />
-                    </div>
-                  )}
+                  <FiX className="w-4 h-4" />
+                </button>
+              </div>
+            ) : null}
 
-                  <div
-                    className={`max-w-[88%] rounded-2xl p-3.5 text-xs shadow-xl leading-relaxed ${
-                      msg.sender === 'user'
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-br-none'
-                        : msg.isContextBanner
-                        ? 'bg-slate-950 border border-emerald-500/40 text-slate-200 rounded-bl-none shadow-emerald-950/30'
-                        : 'bg-slate-950/90 border border-slate-800 text-slate-200 rounded-bl-none font-sans'
-                    }`}
-                  >
-                    <p className={`whitespace-pre-line ${isUrdu ? 'text-sm leading-relaxed text-right' : ''}`}>
-                      {msg.text}
-                    </p>
-
-                    {/* Citations */}
-                    {msg.citations && msg.citations.length > 0 && (
-                      <div className="mt-3 pt-2.5 border-t border-slate-800 space-y-2">
-                        <div className="text-[10px] font-bold text-emerald-400 flex items-center justify-between">
-                          <span className="flex items-center space-x-1">
-                            <HelpCircle className="w-3 h-3" />
-                            <span>Verified Gazette Citations ({msg.citations.length})</span>
-                          </span>
-                          <span className="text-[9px] font-mono text-slate-400 font-normal">One-Click PDF Verification</span>
-                        </div>
-                        {msg.citations.map((cit, idx) => (
-                          <CitationCard
-                            key={idx}
-                            citation={cit}
-                            onOpenPdf={(citationToView) => setActiveCitationPdf(citationToView)}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    {msg.engine && (
-                      <div className="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[9px] text-slate-500 font-mono">
-                        <span>{msg.engine.split('+')[0]}</span>
-                        {msg.spatialFilter && <span className="text-emerald-400 truncate max-w-[140px]">📍 {msg.spatialFilter}</span>}
-                      </div>
-                    )}
-
-                    <span className="block text-[9px] text-right mt-1 opacity-50 font-mono">
-                      {msg.timestamp}
-                    </span>
+            {/* Messages Scroll Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#F4F6F8]/60">
+              
+              {/* Empty / Welcome prompt if no messages */}
+              {messages.length === 0 && (
+                <div className="text-center py-8 space-y-4">
+                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto text-neutral-800 border border-neutral-200 shadow-xs">
+                    <HiOutlineSparkles className="w-6 h-6" />
                   </div>
-
-                  {msg.sender === 'user' && (
-                    <div className="w-7 h-7 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                      <User className="w-4 h-4 text-slate-300" />
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {loading && (
-                <div className="flex items-center space-x-2.5 text-xs text-emerald-400 bg-slate-950/60 border border-slate-800 rounded-2xl p-3 animate-pulse font-mono">
-                  <div className="w-4 h-4 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin shrink-0" />
-                  <span>
-                    {isUrdu
-                      ? 'گوگل جیمنی 1.5 فلیش اور ایل ڈی اے ڈیٹا بیس سے جواب تیار ہو رہا ہے...'
-                      : 'Synthesizing verified policy bylaws via Google Gemini 1.5 Flash...'}
-                  </span>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-neutral-900">
+                      {isUrdu ? 'پنجاب میونسپل پالیسی اسسٹنٹ' : 'Punjab Municipal Policy Assistant'}
+                    </h3>
+                    <p className="text-xs text-neutral-500 max-w-xs mx-auto leading-relaxed">
+                      {isUrdu
+                        ? 'لاہور زوننگ بائی لاز، ایف اے آر اور بلڈنگ رولز سے متعلق کوئی بھی سوال پوچھیں۔'
+                        : 'Ask any question about Lahore zoning bylaws, commercialization, height caps, or setback standards.'}
+                    </p>
+                  </div>
                 </div>
               )}
+
+              {/* Message List */}
+              {messages.map((msg, index) => {
+                const isUser = msg.sender === 'user' || msg.role === 'user';
+                const msgId = msg.id || index;
+                const msgIsUrdu = msg.language === 'ur' || isUrdu;
+
+                return (
+                  <div
+                    key={msgId}
+                    className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1`}
+                  >
+                    <div className="flex items-center space-x-1.5 px-1">
+                      <span className="text-[10px] text-neutral-400 font-medium">
+                        {isUser ? 'You' : 'DocuCity AI'}
+                      </span>
+                    </div>
+
+                    <div
+                      className={`max-w-[92%] p-4 text-xs leading-relaxed transition-all ${
+                        isUser
+                          ? 'bg-[#18181B] text-white rounded-2xl rounded-tr-none shadow-sm'
+                          : 'bg-white text-neutral-900 border border-neutral-200/90 rounded-2xl rounded-tl-none shadow-xs'
+                      }`}
+                    >
+                      {/* Message Text Body */}
+                      <p 
+                        className={`whitespace-pre-wrap ${msgIsUrdu ? 'font-serif text-sm leading-loose text-right' : 'font-sans'}`} 
+                        dir={msgIsUrdu ? 'rtl' : 'ltr'}
+                      >
+                        {msg.text || msg.content}
+                      </p>
+
+                      {/* Verified Citations List */}
+                      {msg.citations && msg.citations.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-neutral-100 space-y-2">
+                          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1 font-mono">
+                            <RiShieldCheckLine className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Verified Citations ({msg.citations.length})</span>
+                          </p>
+                          {msg.citations.map((citation, cIdx) => (
+                            <CitationCard
+                              key={cIdx}
+                              citation={citation}
+                              onOpenPdf={(cit) => setActiveCitationPdf(cit)}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Copy Action button on Assistant messages */}
+                      {!isUser && (
+                        <div className="mt-2 pt-2 border-t border-neutral-100 flex justify-end">
+                          <button
+                            onClick={() => handleCopyText(msg.text || msg.content, msgId)}
+                            className="text-[10px] text-neutral-400 hover:text-neutral-800 flex items-center space-x-1 transition-colors cursor-pointer"
+                          >
+                            {copiedId === msgId ? (
+                              <>
+                                <FiCheck className="w-3 h-3 text-emerald-600" />
+                                <span className="text-emerald-600">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <FiCopy className="w-3 h-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Loading Indicator */}
+              {loading && (
+                <div className="flex items-start space-x-2">
+                  <div className="bg-white border border-neutral-200 p-3.5 rounded-2xl rounded-tl-none shadow-xs space-y-1.5">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-neutral-900 animate-pulse" />
+                      <div className="w-2 h-2 rounded-full bg-neutral-900 animate-pulse delay-100" />
+                      <div className="w-2 h-2 rounded-full bg-neutral-900 animate-pulse delay-200" />
+                    </div>
+                    <p className="text-[10px] text-neutral-400 font-mono">
+                      Querying ChromaDB vector index & legal bylaws...
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </div>
 
-            {/* ── Suggested Prompts Chips ───────────────────────────────────── */}
-            <div className="px-3 py-2 bg-slate-950/80 border-t border-slate-800 shrink-0">
-              <p className="text-[10px] text-slate-400 mb-1.5 font-semibold flex items-center space-x-1">
-                <Sparkles className="w-3 h-3 text-amber-400" />
-                <span>{isUrdu ? 'مجوزہ بلدیاتی سوالات:' : 'Suggested Bylaws Queries:'}</span>
-              </p>
-              <div className="flex space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
-                {(suggestedPrompts && suggestedPrompts.length > 0 ? suggestedPrompts : [
-                  'What is the FAR in Gulberg commercial plots?',
-                  'Height limit for residential buildings in Johar Town?',
-                  'Setback requirements for Mall Road Heritage zone?'
-                ]).map((p, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSuggestion(p)}
-                    disabled={loading}
-                    className="whitespace-nowrap bg-slate-900 hover:bg-emerald-950 text-slate-300 hover:text-emerald-300 hover:border-emerald-500/50 text-[10px] px-3 py-1.5 rounded-full border border-slate-800 transition-all flex items-center space-x-1 shrink-0 font-medium"
-                  >
-                    <span className="truncate max-w-[200px]">{p}</span>
-                    <ChevronRight className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
-                  </button>
-                ))}
+            {/* ── Suggested Prompts Section (Urdu & English Responsive) ── */}
+            {suggestedPrompts && suggestedPrompts.length > 0 && (
+              <div className="p-3 bg-white border-t border-neutral-100 space-y-1.5 shrink-0 max-h-32 overflow-y-auto">
+                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-1">
+                  {isUrdu ? 'تجویز کردہ سوالات:' : 'Suggested Inquiries:'}
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {suggestedPrompts.map((prompt, pIdx) => (
+                    <button
+                      key={pIdx}
+                      onClick={() => handleSuggestion(prompt)}
+                      dir={isUrdu ? 'rtl' : 'ltr'}
+                      className={`text-xs bg-neutral-50 hover:bg-neutral-100 hover:border-neutral-300 text-neutral-800 border border-neutral-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer truncate text-left ${
+                        isUrdu ? 'font-serif text-right' : 'font-sans'
+                      }`}
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* Message Input Box */}
+            <div className="p-3.5 bg-white border-t border-neutral-200/80 shrink-0">
+              <form onSubmit={handleSubmit} className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  dir={isUrdu ? 'rtl' : 'ltr'}
+                  placeholder={
+                    isUrdu
+                      ? 'زوننگ، ایف اے آر اور بلڈنگ بائی لاز سے متعلق پوچھیں...'
+                      : 'Ask about zoning, FAR, setbacks, or commercial rules...'
+                  }
+                  className={`flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:border-neutral-900 ${
+                    isUrdu ? 'font-serif text-right text-sm' : 'font-sans'
+                  }`}
+                  disabled={loading}
+                />
+
+                <button
+                  type="submit"
+                  disabled={loading || !inputText.trim()}
+                  className="bg-neutral-900 hover:bg-black text-white p-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center disabled:opacity-50 cursor-pointer shrink-0"
+                >
+                  <FiSend className="w-4 h-4" />
+                </button>
+              </form>
             </div>
 
-            {/* ── User Input Box ───────────────────────────────────────────── */}
-            <form
-              onSubmit={handleSubmit}
-              className="p-3 bg-slate-950 border-t border-slate-800 flex items-center space-x-2 shrink-0"
-            >
-              <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder={
-                  isUrdu
-                    ? `${selectedZone ? (selectedZone.zone_name || 'منتخب علاقے') : 'لاہور'} کے بائی لاز کے بارے میں سوال پوچھیں...`
-                    : `Ask about ${selectedZone ? (selectedZone.zone_name || 'this area') : 'LDA'} FAR, heights, setbacks...`
-                }
-                dir={isUrdu ? 'rtl' : 'ltr'}
-                className={`flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans transition-all ${
-                  isUrdu ? 'text-right' : ''
-                }`}
-              />
-              <button
-                type="submit"
-                disabled={loading || !inputText.trim()}
-                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center shrink-0"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
           </div>
         )}
       </div>
 
-      {/* One-Click PDF Preview Modal */}
+      {/* PDF Citation Viewer Modal */}
       <PdfCitationViewerModal
         isOpen={Boolean(activeCitationPdf)}
         citation={activeCitationPdf}

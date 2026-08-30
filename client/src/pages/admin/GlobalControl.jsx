@@ -1,8 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Settings, Key, Globe, Database, Layers, RefreshCw, Trash2, ShieldCheck,
-  CheckCircle2, AlertTriangle, Save, Cpu, MapPin, Sliders, Server, Zap
-} from 'lucide-react';
+import { 
+  FiSettings, 
+  FiKey, 
+  FiGlobe, 
+  FiDatabase, 
+  FiLayers, 
+  FiRefreshCw, 
+  FiTrash2, 
+  FiShield, 
+  FiCheckCircle, 
+  FiAlertTriangle, 
+  FiSave, 
+  FiCpu, 
+  FiMapPin, 
+  FiSliders, 
+  FiServer, 
+  FiZap 
+} from 'react-icons/fi';
+import { 
+  RiShieldCheckLine, 
+  RiBuildingLine 
+} from 'react-icons/ri';
 import axios from 'axios';
 
 export function GlobalControlPage() {
@@ -90,227 +108,149 @@ export function GlobalControlPage() {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in overflow-y-auto max-h-[calc(100vh-6rem)] pr-2 pb-24">
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-purple-950/80 via-slate-900 to-slate-900 border border-purple-500/30 p-6 rounded-3xl flex items-center justify-between shadow-2xl backdrop-blur-xl">
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2">
-            <Settings className="w-6 h-6 text-purple-400" />
-            <h1 className="text-xl font-bold text-white">Global Platform Control & Built-in LLM Engine</h1>
-          </div>
-          <p className="text-xs text-slate-400">
-            Full administrative control across local built-in LLMs (Qwen2.5 / Alif / Qalb), MongoDB vector search, and spatial layers.
-          </p>
-        </div>
-
-        <button
-          onClick={() => saveSettingsToMongo()}
-          disabled={saving}
-          className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-purple-600/30 flex items-center space-x-2"
-        >
-          <Save className="w-4 h-4" />
-          <span>{saving ? 'Saving Config...' : 'Save Global Settings'}</span>
-        </button>
-      </div>
-
+    <div className="space-y-6 animate-fade-in font-sans">
+      
+      {/* Top Banner Notice if Saved */}
       {message && (
-        <div className="flex items-center space-x-2 text-xs bg-emerald-950/60 border border-emerald-800 text-emerald-400 p-4 rounded-2xl animate-fade-in">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{message}</span>
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl flex items-center space-x-2 text-xs">
+          <FiCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span className="font-semibold">{message}</span>
         </div>
       )}
 
       {actionNotice && (
-        <div className="flex items-center space-x-2 text-xs bg-purple-950/60 border border-purple-800 text-purple-300 p-4 rounded-2xl animate-fade-in">
-          <RefreshCw className="w-4 h-4 text-purple-400 shrink-0 animate-spin" />
+        <div className="bg-neutral-900 text-white p-4 rounded-2xl flex items-center space-x-2 text-xs shadow-sm">
+          <FiZap className="w-4 h-4 text-amber-400 shrink-0" />
           <span>{actionNotice}</span>
         </div>
       )}
 
-      {/* ZERO EXTERNAL API CALLS NOTICE BANNER */}
-      <div className="bg-emerald-950/40 border border-emerald-500/40 p-4 rounded-2xl flex items-center justify-between text-xs text-emerald-300 shadow-xl">
-        <div className="flex items-center space-x-3">
-          <Server className="w-5 h-5 text-emerald-400 shrink-0" />
-          <div>
-            <p className="font-bold text-white">Local Built-in Inference Engine (Zero External API Calls)</p>
-            <p className="text-[11px] text-slate-400">Generation and QA LLMs run locally via Ollama / vLLM without third-party API dependencies.</p>
+      {/* ── 1. Built-in LLM Model Selector ──────────────────────────── */}
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-5">
+        <div className="flex items-center space-x-3 border-b border-neutral-100 pb-4">
+          <div className="w-10 h-10 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-xs">
+            <FiCpu className="w-5 h-5" />
           </div>
-        </div>
-        <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/30 font-mono font-bold text-[10px]">
-          OFFLINE LOCAL SECURE
-        </span>
-      </div>
-
-      {/* SECTION 1: Built-in Local LLM Selector */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
-        <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-white flex items-center space-x-2">
-              <Cpu className="w-5 h-5 text-purple-400" />
-              <span>Built-in Generation & QA LLM Models</span>
-            </h2>
-            <p className="text-xs text-slate-400">Select local LLM model running via Ollama (`ollama run qwen2.5:7b` or `enstazao/qalb`)</p>
+            <h2 className="text-base font-bold text-neutral-900 tracking-tight">Active Foundation AI Model Configuration</h2>
+            <p className="text-xs text-neutral-400">Select active Urdu & English bilingual inference engine with zero external API calls</p>
           </div>
-
-          <span className="bg-purple-500/10 text-purple-300 px-3 py-1 rounded-full text-xs font-mono font-bold border border-purple-500/30">
-            Active: {settings.activeModel}
-          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {settings.availableBuiltinModels.map((m) => (
+          {settings.availableBuiltinModels.map((model) => (
             <div
-              key={m.id}
-              onClick={() => handleSelectModel(m.name)}
-              className={`p-5 rounded-2xl border cursor-pointer transition-all space-y-3 relative ${
-                settings.activeModel === m.name
-                  ? 'bg-purple-950/40 border-purple-500 shadow-xl'
-                  : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+              key={model.id}
+              onClick={() => handleSelectModel(model.id)}
+              className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                settings.activeModel === model.id
+                  ? 'bg-neutral-900 text-white border-neutral-900 shadow-md scale-[1.01]'
+                  : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border-neutral-200'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span className="font-extrabold text-sm text-white">{m.name}</span>
-                <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                  settings.activeModel === m.name ? 'bg-purple-500 text-white' : 'bg-slate-800 text-slate-500'
-                }`}>
-                  ✓
-                </span>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                    settings.activeModel === model.id ? 'bg-white/20 text-white' : 'bg-neutral-200 text-neutral-800'
+                  }`}>
+                    {model.speed}
+                  </span>
+                  {settings.activeModel === model.id && (
+                    <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                      <FiCheckCircle className="w-3 h-3" />
+                      Active
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-bold text-sm">{model.name}</h3>
+                <p className={`text-xs mt-1 leading-relaxed ${settings.activeModel === model.id ? 'text-neutral-300' : 'text-neutral-500'}`}>
+                  {model.description}
+                </p>
               </div>
 
-              <p className="text-xs text-slate-400 leading-relaxed">{m.description}</p>
-
-              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
-                <span className="text-emerald-400 font-mono font-bold">Zero API Cost</span>
-                <span className="bg-slate-900 text-slate-300 px-2 py-0.5 rounded font-mono">{m.speed}</span>
+              <div className="pt-2 border-t border-white/10 text-[10px] font-mono">
+                Engine: {model.local ? 'Self-Hosted Local Ollama' : 'Cloud Endpoint'}
               </div>
             </div>
           ))}
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-          <div>
-            <label className="text-xs text-slate-400 font-semibold mb-1 block">Local Ollama API Endpoint</label>
-            <input
-              type="text"
-              value={settings.localOllamaEndpoint}
-              onChange={(e) => setSettings({ ...settings, localOllamaEndpoint: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-slate-400 font-semibold mb-1 block">JWT Token Expiration (Hours)</label>
-            <input
-              type="number"
-              value={settings.jwtExpirationHours}
-              onChange={(e) => setSettings({ ...settings, jwtExpirationHours: parseInt(e.target.value) || 24 })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
-            />
-          </div>
-        </div>
       </div>
 
-      {/* SECTION 2: Vector Store Maintenance & Bulk Administrative Actions */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
-        <div className="border-b border-slate-800 pb-3">
-          <h2 className="text-base font-bold text-white flex items-center space-x-2">
-            <Database className="w-5 h-5 text-emerald-400" />
-            <span>Document Records & Vector Store Maintenance</span>
-          </h2>
-          <p className="text-xs text-slate-400">Execute administrative actions across MongoDB vector collections and spatial caches</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-            <div className="flex items-center space-x-2 text-xs font-bold text-white">
-              <RefreshCw className="w-4 h-4 text-emerald-400" />
-              <span>Re-Index Vector Search</span>
-            </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Re-build MongoDB vector embeddings across all 14 official LDA gazette documents.
-            </p>
-            <button
-              onClick={() => handleTriggerAction('reindex_vector')}
-              className="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-bold py-2 rounded-xl border border-slate-700 transition-all"
-            >
-              Re-Index All Documents
-            </button>
+      {/* ── 2. Spatial Layer Visibility Defaults ──────────────────────── */}
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-4">
+        <div className="flex items-center space-x-3 border-b border-neutral-100 pb-4">
+          <div className="w-10 h-10 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-xs">
+            <FiLayers className="w-5 h-5" />
           </div>
-
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-            <div className="flex items-center space-x-2 text-xs font-bold text-white">
-              <Sliders className="w-4 h-4 text-blue-400" />
-              <span>Reload Spatial Layers</span>
-            </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Reload Lahore Development Authority GeoJSON spatial layers from local storage.
-            </p>
-            <button
-              onClick={() => handleTriggerAction('reload_spatial')}
-              className="w-full bg-slate-800 hover:bg-slate-700 text-blue-400 text-xs font-bold py-2 rounded-xl border border-slate-700 transition-all"
-            >
-              Reload GeoJSON Layers
-            </button>
-          </div>
-
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-            <div className="flex items-center space-x-2 text-xs font-bold text-white">
-              <Trash2 className="w-4 h-4 text-rose-400" />
-              <span>Flush Transient Cache</span>
-            </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Flush cached query responses and reset MongoDB connection pools.
-            </p>
-            <button
-              onClick={() => handleTriggerAction('flush_cache')}
-              className="w-full bg-slate-800 hover:bg-slate-700 text-rose-400 text-xs font-bold py-2 rounded-xl border border-slate-700 transition-all"
-            >
-              Flush Cache & Connections
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* SECTION 3: Active Spatial Layers Control */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div>
-            <h2 className="text-base font-bold text-white flex items-center space-x-2">
-              <Layers className="w-5 h-5 text-purple-400" />
-              <span>Active Lahore Spatial GeoJSON Polygon Layers</span>
-            </h2>
-            <p className="text-xs text-slate-400">Toggle public visibility of zoning layers on the Leaflet GIS map</p>
+            <h2 className="text-base font-bold text-neutral-900 tracking-tight">Active GIS Spatial Layer Configuration</h2>
+            <p className="text-xs text-neutral-400">Toggle default active layers for public and officer Leaflet map viewers</p>
           </div>
-          <span className="text-xs text-purple-400 font-mono font-bold">
-            Center: {settings.spatialDefaults.lahoreLatitude}° N, {settings.spatialDefaults.lahoreLongitude}° E
-          </span>
         </div>
 
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {settings.spatialLayers.map((layer) => (
-            <div key={layer.id} className="bg-slate-950 border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between text-xs">
+            <div
+              key={layer.id}
+              onClick={() => handleToggleLayer(layer.id)}
+              className="p-4 bg-neutral-50 hover:bg-neutral-100/80 border border-neutral-200 rounded-2xl flex items-center justify-between transition-all cursor-pointer text-xs"
+            >
               <div className="flex items-center space-x-3">
-                <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: layer.color }}></span>
+                <span className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: layer.color }} />
                 <div>
-                  <p className="font-bold text-white">{layer.name}</p>
-                  <p className="text-[10px] font-mono text-slate-500">Zone Code: {layer.code}</p>
+                  <p className="font-bold text-neutral-900">{layer.name}</p>
+                  <p className="text-neutral-500 font-mono text-[10px]">{layer.code}</p>
                 </div>
               </div>
-
-              <button
-                onClick={() => handleToggleLayer(layer.id)}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
-                  layer.active
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                    : 'bg-slate-800 text-slate-500'
-                }`}
-              >
-                {layer.active ? 'Layer Active' : 'Disabled'}
-              </button>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                layer.active ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-600'
+              }`}>
+                {layer.active ? 'Enabled' : 'Disabled'}
+              </span>
             </div>
           ))}
         </div>
       </div>
+
+      {/* ── 3. Administrative Maintenance Quick Actions ───────────────── */}
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-4">
+        <div className="flex items-center space-x-3 border-b border-neutral-100 pb-4">
+          <div className="w-10 h-10 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-xs">
+            <FiZap className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-neutral-900 tracking-tight">Administrative Maintenance Actions</h2>
+            <p className="text-xs text-neutral-400">Trigger manual index rebuilds, warm up local model weights, or flush memory caches</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3 pt-1">
+          <button
+            onClick={() => handleTriggerAction('rebuild_vector_index')}
+            className="bg-neutral-900 hover:bg-black text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer"
+          >
+            <FiRefreshCw className="w-3.5 h-3.5" />
+            <span>Rebuild Vector Semantic Index</span>
+          </button>
+
+          <button
+            onClick={() => handleTriggerAction('warmup_llm')}
+            className="bg-neutral-50 hover:bg-neutral-100 text-neutral-800 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all border border-neutral-200 flex items-center space-x-1.5 cursor-pointer"
+          >
+            <FiCpu className="w-3.5 h-3.5" />
+            <span>Warmup Local Model Weights</span>
+          </button>
+
+          <button
+            onClick={() => handleTriggerAction('flush_cache')}
+            className="bg-neutral-50 hover:bg-neutral-100 text-neutral-800 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all border border-neutral-200 flex items-center space-x-1.5 cursor-pointer"
+          >
+            <FiTrash2 className="w-3.5 h-3.5" />
+            <span>Flush Query Latency Cache</span>
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 }

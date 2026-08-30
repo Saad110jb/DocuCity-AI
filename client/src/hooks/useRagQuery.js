@@ -1,6 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { queryRagApi } from '../services/api';
 
+const DEFAULT_ENGLISH_PROMPTS = [
+  'What are the setback restrictions for All Lahore District?',
+  'How is the commercial conversion fee calculated?',
+  'What are WASA water connection prerequisites?'
+];
+
+const DEFAULT_URDU_PROMPTS = [
+  'لاہور میں سیٹ بیک اور بلڈنگ بائی لاز کیا ہیں؟',
+  'کمرشل کنورژن فیس کا حساب کس طرح لگایا جاتا ہے؟',
+  'واسا سے واٹر کنکشن حاصل کرنے کے کیا ضوابط ہیں؟'
+];
+
 export function useRagQuery(selectedZone = null) {
   const [messages, setMessages] = useState([
     {
@@ -21,21 +33,21 @@ export function useRagQuery(selectedZone = null) {
   ]);
   const [loading, setLoading] = useState(false);
   const [language, setLanguage] = useState('en');
-  const [suggestedPrompts, setSuggestedPrompts] = useState([
-    'What is the FAR in Gulberg commercial plots?',
-    'Height limit for residential buildings in Johar Town?',
-    'Setback requirements for Mall Road Heritage zone?'
-  ]);
+  const [suggestedPrompts, setSuggestedPrompts] = useState(DEFAULT_ENGLISH_PROMPTS);
 
   const lastZoneRef = useRef(null);
+
+  // Sync prompts whenever language changes (if no custom followups)
+  useEffect(() => {
+    if (!selectedZone) {
+      setSuggestedPrompts(language === 'ur' ? DEFAULT_URDU_PROMPTS : DEFAULT_ENGLISH_PROMPTS);
+    }
+  }, [language]);
 
   // When citizen selects any area on the map, update chatbot context automatically
   useEffect(() => {
     if (!selectedZone) return;
     const zoneKey = selectedZone.zone_code || selectedZone.zone_name;
-    if (lastZoneRef.current === zoneKey) return;
-    lastZoneRef.current = zoneKey;
-
     const isUrdu = language === 'ur';
     const zoneName = selectedZone.zone_name || selectedZone.name || 'Selected Location';
     const authority = selectedZone.authority || selectedZone.department || 'LDA';
@@ -43,6 +55,25 @@ export function useRagQuery(selectedZone = null) {
     const height = selectedZone.max_height_ft ? `${selectedZone.max_height_ft} ft` : '38 ft (G+2)';
     const setbackFront = selectedZone.setback_front_ft ? `${selectedZone.setback_front_ft} ft compulsory` : '10 ft';
     const commercialStatus = selectedZone.commercialization_status || 'Subject to LDA Gazette';
+    const shortName = zoneName.split('(')[0].trim();
+
+    // Update dynamic suggested prompt chips based on selected zone & language
+    if (isUrdu) {
+      setSuggestedPrompts([
+        `${shortName} میں عمارت کی زیادہ سے زیادہ اونچائی کیا ہے؟`,
+        `${shortName} میں کمرشلائزیشن فیس کا کیا تناسب ہے؟`,
+        `${shortName} کے لازمی فرنٹ اور سائیڈ سیٹ بیک کیا ہیں؟`
+      ]);
+    } else {
+      setSuggestedPrompts([
+        `What is the maximum building height allowed in ${shortName}?`,
+        `What are the road setback & open space rules for ${shortName}?`,
+        `What is the commercial conversion fee in ${shortName}?`
+      ]);
+    }
+
+    if (lastZoneRef.current === zoneKey) return;
+    lastZoneRef.current = zoneKey;
 
     const contextMsg = {
       id: `zone-context-${Date.now()}`,
@@ -54,13 +85,13 @@ export function useRagQuery(selectedZone = null) {
           `• **زیادہ سے زیادہ اونچائی**: ${height}\n` +
           `• **فرنٹ سیٹ بیک**: ${setbackFront}\n` +
           `• **کمرشلائزیشن**: ${commercialStatus}\n\n` +
-          `میں نے اپنے تمام جوابات اس مخصوص زون کے قواعد و ضوابط کے مطابق ترتیب دے دیے ہیں۔ نیچے دیا گیا کوئی بھی سوال پوچھیں!`
+          `تمام جوابات اس مخصوص زون کے قواعد و ضوابط کے مطابق ترتیب دے دیے گئے ہیں۔`
         : `📍 **Spatial Location Filter Locked: ${zoneName}** (${authority})\n` +
           `• **Permitted FAR**: ${far}\n` +
           `• **Max Height**: ${height}\n` +
           `• **Front Road Setback**: ${setbackFront}\n` +
           `• **Commercialization Status**: ${commercialStatus}\n\n` +
-          `DocuCity AI is now contextualized to this exact area. Ask any question regarding building rules, setbacks, fees, or WASA connections!`,
+          `DocuCity AI is now contextualized to this exact area. Ask any question regarding building rules or setbacks!`,
       citations: [
         {
           document_title: `${authority} Spatial Zoning Gazette`,
@@ -74,22 +105,6 @@ export function useRagQuery(selectedZone = null) {
     };
 
     setMessages((prev) => [...prev, contextMsg]);
-
-    // Update dynamic suggested prompt chips
-    const shortName = zoneName.split(' ')[0];
-    if (isUrdu) {
-      setSuggestedPrompts([
-        `${shortName} میں عمارت کی اونچائی کی کیا حد ہے؟`,
-        `${shortName} میں کمرشلائزیشن فیس کا کیا اصول ہے؟`,
-        `کیا ${shortName} میں واسا سیوریج بفر لاگو ہوتا ہے؟`
-      ]);
-    } else {
-      setSuggestedPrompts([
-        `What is the maximum building height allowed in ${shortName}?`,
-        `What are the road setback & open space rules for ${shortName}?`,
-        `What is the commercial conversion fee in ${shortName}?`
-      ]);
-    }
   }, [selectedZone, language]);
 
   const sendQuery = async (queryText, zoneCodeOverride = null) => {

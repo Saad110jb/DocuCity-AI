@@ -4,9 +4,7 @@ import { DashboardPage } from './pages/index';
 import { PortalPage } from './pages/portal';
 import { CitizenPortalPage } from './pages/citizen/CitizenPortal';
 import { UploadModal } from './components/admin/UploadModal';
-import { CitizenAuth } from './pages/auth/CitizenAuth';
-import { OfficerAuth } from './pages/auth/OfficerAuth';
-import { AdminAuth } from './pages/auth/AdminAuth';
+import { LoginPage } from './pages/login';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { UserManagementPage } from './pages/admin/UserManagement';
 import { SecurityManagementPage } from './pages/admin/SecurityManagement';
@@ -26,6 +24,7 @@ export default function App() {
     if (path.includes('/officer/portal') || path === '/portal') return 'officer-portal';
     if (path.includes('/auth/citizen') || path === '/citizen') return 'auth-citizen';
     if (path.includes('/citizen/portal')) return 'citizen-portal';
+    if (path.includes('/login')) return 'login';
     return 'gis';
   };
 
@@ -41,8 +40,23 @@ export default function App() {
     }
   });
 
-  const [officerUser, setOfficerUser] = useState(null);
-  const [adminUser, setAdminUser] = useState(null);
+  const [officerUser, setOfficerUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('docucity_officer_user');
+      return saved ? JSON.parse(saved) : { name: "OFFICER", email: "officer@lda.gop.pk", role: "officer", department: "Lahore Development Authority (LDA)" };
+    } catch(e) {
+      return { name: "OFFICER", email: "officer@lda.gop.pk", role: "officer", department: "Lahore Development Authority (LDA)" };
+    }
+  });
+
+  const [adminUser, setAdminUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('docucity_admin_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch(e) {
+      return null;
+    }
+  });
 
   // Admin layout state
   const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
@@ -61,7 +75,8 @@ export default function App() {
   const navigateToView = (targetView) => {
     setCurrentView(targetView);
     let path = '/';
-    if (targetView === 'auth-citizen') path = '/auth/citizen';
+    if (targetView === 'login') path = '/login';
+    else if (targetView === 'auth-citizen') path = '/auth/citizen';
     else if (targetView === 'citizen-portal') path = '/citizen/portal';
     else if (targetView === 'auth-officer') path = '/auth/officer/login';
     else if (targetView === 'auth-admin') path = '/auth/admin/login';
@@ -74,13 +89,26 @@ export default function App() {
     window.history.pushState({}, '', path);
   };
 
-  // Login Success Handlers
-  const handleCitizenLoginSuccess = (userObj) => {
-    setCitizenUser(userObj);
-    try {
-      localStorage.setItem('docucity_citizen_user', JSON.stringify(userObj));
-    } catch(e) {}
-    navigateToView('citizen-portal');
+  // Unified Login Success Handler for all roles
+  const handleGenericLoginSuccess = (userObj, role) => {
+    if (role === 'admin' || (userObj && userObj.role === 'admin')) {
+      setAdminUser(userObj);
+      try { localStorage.setItem('docucity_admin_user', JSON.stringify(userObj)); } catch(e) {}
+      navigateToView('admin-users');
+    } else if (role === 'citizen' || (userObj && (userObj.role === 'citizen' || userObj.role === 'public'))) {
+      setCitizenUser(userObj);
+      try { localStorage.setItem('docucity_citizen_user', JSON.stringify(userObj)); } catch(e) {}
+      navigateToView('citizen-portal');
+    } else {
+      const formattedOfficer = {
+        ...userObj,
+        role: 'officer',
+        department: userObj.department || 'Lahore Development Authority (LDA)'
+      };
+      setOfficerUser(formattedOfficer);
+      try { localStorage.setItem('docucity_officer_user', JSON.stringify(formattedOfficer)); } catch(e) {}
+      navigateToView('officer-portal');
+    }
   };
 
   const handleCitizenLogout = () => {
@@ -91,22 +119,28 @@ export default function App() {
     navigateToView('gis');
   };
 
-  const handleOfficerLoginSuccess = (userObj) => {
-    setOfficerUser(userObj);
-    navigateToView('officer-portal');
+  const handleOfficerLogout = () => {
+    setOfficerUser(null);
+    try {
+      localStorage.removeItem('docucity_officer_user');
+    } catch(e) {}
+    navigateToView('auth-officer');
   };
 
-  const handleAdminLoginSuccess = (userObj) => {
-    setAdminUser(userObj);
-    navigateToView('admin-users');
+  const handleAdminLogout = () => {
+    setAdminUser(null);
+    try {
+      localStorage.removeItem('docucity_admin_user');
+    } catch(e) {}
+    navigateToView('auth-admin');
   };
 
-  // 1. VIEW: Super Admin System Monitoring & Audit Logs (/admin/audit)
+  // 1. Super Admin Audit Logs
   if (currentView === 'admin-audit') {
     return (
       <AdminLayout
         user={adminUser}
-        onLogout={() => { setAdminUser(null); navigateToView('auth-admin'); }}
+        onLogout={handleAdminLogout}
         onOpenProvision={() => setIsProvisionModalOpen(true)}
         searchTerm={globalSearchTerm}
         setSearchTerm={setGlobalSearchTerm}
@@ -120,12 +154,12 @@ export default function App() {
     );
   }
 
-  // 2. VIEW: Super Admin Global Platform Control (/admin/settings)
+  // 2. Super Admin Settings
   if (currentView === 'admin-settings') {
     return (
       <AdminLayout
         user={adminUser}
-        onLogout={() => { setAdminUser(null); navigateToView('auth-admin'); }}
+        onLogout={handleAdminLogout}
         onOpenProvision={() => setIsProvisionModalOpen(true)}
         searchTerm={globalSearchTerm}
         setSearchTerm={setGlobalSearchTerm}
@@ -139,12 +173,12 @@ export default function App() {
     );
   }
 
-  // 3. VIEW: Super Admin Security & Namespace Isolation (/admin/security)
+  // 3. Super Admin Security
   if (currentView === 'admin-security') {
     return (
       <AdminLayout
         user={adminUser}
-        onLogout={() => { setAdminUser(null); navigateToView('auth-admin'); }}
+        onLogout={handleAdminLogout}
         onOpenProvision={() => setIsProvisionModalOpen(true)}
         searchTerm={globalSearchTerm}
         setSearchTerm={setGlobalSearchTerm}
@@ -158,12 +192,12 @@ export default function App() {
     );
   }
 
-  // 4. VIEW: Super Admin Governance Dashboard (/admin/users)
+  // 4. Super Admin Users
   if (currentView === 'admin-users') {
     return (
       <AdminLayout
         user={adminUser}
-        onLogout={() => { setAdminUser(null); navigateToView('auth-admin'); }}
+        onLogout={handleAdminLogout}
         onOpenProvision={() => setIsProvisionModalOpen(true)}
         searchTerm={globalSearchTerm}
         setSearchTerm={setGlobalSearchTerm}
@@ -180,56 +214,71 @@ export default function App() {
     );
   }
 
-  // 5. VIEW: Super Admin Dedicated Login (/auth/admin/login)
+  // 5. Super Admin Login
   if (currentView === 'auth-admin') {
     return (
-      <AdminAuth
-        onAdminLoginSuccess={handleAdminLoginSuccess}
+      <LoginPage
+        initialRole="admin"
+        onLoginSuccess={handleGenericLoginSuccess}
+        onNavigateToGis={() => navigateToView('gis')}
       />
     );
   }
 
-  // 6. VIEW: Municipal Officer Workspace (/officer/portal)
+  // 6. Officer Workspace
   if (currentView === 'officer-portal') {
     return (
       <PortalPage
         officerUser={officerUser}
-        onOfficerLogout={() => { setOfficerUser(null); navigateToView('auth-officer'); }}
+        onOfficerLogout={handleOfficerLogout}
       />
     );
   }
 
-  // 7. VIEW: Municipal Officer Dedicated Login (/auth/officer/login)
+  // 7. Officer Login
   if (currentView === 'auth-officer') {
     return (
-      <OfficerAuth
-        onNavigateToPortal={() => navigateToView('officer-portal')}
-        onLoginSuccess={handleOfficerLoginSuccess}
+      <LoginPage
+        initialRole="officer"
+        onLoginSuccess={handleGenericLoginSuccess}
+        onNavigateToGis={() => navigateToView('gis')}
       />
     );
   }
 
-  // 8. VIEW: Citizen Authentication (/auth/citizen)
+  // 8. Citizen Login
   if (currentView === 'auth-citizen') {
     return (
-      <CitizenAuth
+      <LoginPage
+        initialRole="citizen"
+        onLoginSuccess={handleGenericLoginSuccess}
         onNavigateToGis={() => navigateToView('gis')}
-        onLoginSuccess={handleCitizenLoginSuccess}
       />
     );
   }
 
-  // 8.5. VIEW: Citizen Portal (/citizen/portal)
+  // 8.1 Unified Login
+  if (currentView === 'login') {
+    return (
+      <LoginPage
+        initialRole="officer"
+        onLoginSuccess={handleGenericLoginSuccess}
+        onNavigateToGis={() => navigateToView('gis')}
+      />
+    );
+  }
+
+  // 8.5. Citizen Portal
   if (currentView === 'citizen-portal') {
     return (
-      <div className="h-screen bg-slate-950 text-slate-100 flex flex-col font-sans overflow-hidden">
+      <div className="min-h-screen bg-[#F4F6F8] text-neutral-900 flex flex-col font-sans">
         <Header
           activeTab={currentView}
           setActiveTab={navigateToView}
           citizenUser={citizenUser}
           onCitizenLogout={handleCitizenLogout}
         />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1">
           <CitizenPortalPage
             user={citizenUser}
             onOpenMap={() => navigateToView('gis')}
@@ -239,16 +288,15 @@ export default function App() {
     );
   }
 
-  // 9. PUBLIC DEFAULT VIEW: Interactive Public GIS Policy Explorer (/)
+  // 9. Default Interactive Policy Map
   return (
-    <div className="h-screen bg-slate-950 text-slate-100 flex flex-col font-sans overflow-hidden">
+    <div className="h-screen bg-[#F4F6F8] text-neutral-900 flex flex-col font-sans overflow-hidden">
       <Header
         activeTab={currentView}
         setActiveTab={navigateToView}
         citizenUser={citizenUser}
         onCitizenLogout={handleCitizenLogout}
       />
-
       <main className="flex-1 overflow-hidden">
         <DashboardPage />
       </main>

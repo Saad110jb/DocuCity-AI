@@ -1,17 +1,105 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Book, Download, Search, Filter, FileText, Calendar, Building2,
-  MapPin, User, ShieldCheck, Lock, Eye, CheckCircle2, Sparkles, RefreshCw
-} from 'lucide-react';
+import { 
+  FiBook, 
+  FiDownload, 
+  FiSearch, 
+  FiFilter, 
+  FiFileText, 
+  FiCalendar, 
+  FiMapPin, 
+  FiUser, 
+  FiShield, 
+  FiLock, 
+  FiEye, 
+  FiCheckCircle, 
+  FiRefreshCw,
+  FiArrowRight,
+  FiCompass,
+  FiSend,
+  FiMessageSquare,
+  FiSliders
+} from 'react-icons/fi';
+import { 
+  RiFileTextLine, 
+  RiShieldCheckLine, 
+  RiGovernmentLine,
+  RiMapPinLine 
+} from 'react-icons/ri';
+import { 
+  HiOutlineSparkles 
+} from 'react-icons/hi2';
 import axios from 'axios';
 import { PdfCitationViewerModal } from '../../components/common/PdfCitationViewerModal';
 
 export function CitizenPortalPage({ user, onOpenMap }) {
+  // Gazette Library filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAuthority, setSelectedAuthority] = useState('All');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedYear, setSelectedYear] = useState('All');
   const [activePdfModal, setActivePdfModal] = useState(null);
+
+  // Quick Plot Zoning Check state
+  const [selectedZoneQuery, setSelectedZoneQuery] = useState('Johar Town Phase 2');
+  const [zoneResult, setZoneResult] = useState({
+    zoneName: 'Johar Town (Phase 1 & 2, Blocks A-R)',
+    authority: 'Lahore Development Authority (LDA)',
+    permittedLandUse: 'Commercial & Multi-Storey Residential (List A Corridors)',
+    maxFAR: '1:6 (Standard Commercial) / 1:8 (Main Boulevard Special Zone)',
+    maxHeight: '90 ft (G+6) to 120 ft (Main Boulevard)',
+    frontSetback: '20 ft minimum',
+    sideSetback: '10 ft minimum',
+    commercialFee: '20% DC Commercial Rate for permanent conversion',
+    gazetteRef: 'LDA Gazette 2026 Volume III — Clause 4.2',
+    waterTariff: 'WASA Category B Commercial Tariff applicable'
+  });
+
+  const sampleZones = [
+    {
+      name: 'Johar Town (Phase 1 & 2, Blocks A-R)',
+      authority: 'LDA',
+      use: 'Commercial & Multi-Storey Residential',
+      far: '1:6 (Standard) / 1:8 (Main Blvd)',
+      height: '90 ft to 120 ft',
+      frontSetback: '20 ft',
+      sideSetback: '10 ft',
+      fee: '20% DC Commercial Rate',
+      ref: 'LDA Gazette 2026 Volume III'
+    },
+    {
+      name: 'Gulberg Commercial Zone (Main Blvd & M.M. Alam)',
+      authority: 'LDA',
+      use: 'High Density Commercial & Mixed-Use',
+      far: '1:8 High Density Allowance',
+      height: '120 ft (10 Storeys Permitted)',
+      frontSetback: '20 ft mandatory',
+      sideSetback: '10 ft',
+      fee: 'Tier 1 Prime Commercial (20% DC Rate)',
+      ref: 'LDA Gazette 2026 Notification 725'
+    },
+    {
+      name: 'Model Town & Extension (Blocks A-M)',
+      authority: 'MCL / Model Town Society',
+      use: 'Low Density Residential & Designated Bazaars',
+      far: '1:4 Residential Density',
+      height: '38 ft (G+2 Storeys)',
+      frontSetback: '15 ft',
+      sideSetback: '5 ft',
+      fee: 'Residential Tariff / Non-Commercialized',
+      ref: 'MCL Residential Zoning Guidelines'
+    },
+    {
+      name: 'Walled City of Lahore (Heritage Conservation Buffer)',
+      authority: 'Walled City Authority (WCLA)',
+      use: 'Heritage Commercial & Traditional Residential',
+      far: '1:2.5 Heritage Cap',
+      height: '30 ft Strict Maximum Height',
+      frontSetback: 'Preserve Traditional Streetline',
+      sideSetback: 'Zero lot line / Traditional',
+      fee: 'Heritage Conservation NOC Required',
+      ref: 'WCLA Act 2012 Buffer Notification'
+    }
+  ];
 
   const defaultGazettes = [
     {
@@ -129,7 +217,6 @@ export function CitizenPortalPage({ user, onOpenMap }) {
             snippet: `Statutory municipal gazette record for ${d.title}. Parsed ${d.totalPages || 2} pages into MongoDB vector index.`
           }));
 
-          // Merge live mongo documents with defaults
           const merged = [...liveList];
           defaultGazettes.forEach(def => {
             if (!merged.some(m => m.title.toLowerCase() === def.title.toLowerCase())) {
@@ -189,150 +276,290 @@ This is an authentic, legally grounded record retrieved from the DocuCity Lahore
     URL.revokeObjectURL(url);
   };
 
+  const scrollToLibrary = () => {
+    const el = document.getElementById('gazette-library-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <>
-      <div className="min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-200 p-6 md:p-8 font-sans">
-        <div className="max-w-7xl mx-auto space-y-8">
+      <div className="min-h-screen bg-[#F4F6F8] text-neutral-900 font-sans p-6 sm:p-8 selection:bg-neutral-900 selection:text-white">
+        <div className="max-w-7xl mx-auto space-y-6">
           
-          {/* ── Header Section ────────────────────────────────────────── */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
-            <div>
-              <div className="flex items-center space-x-2 text-emerald-400 text-xs font-mono mb-1">
-                <ShieldCheck className="w-4 h-4" />
+          {/* ── 1. Top Hero Greeting & Scope Card ───────────────────────── */}
+          <div className="bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center space-x-1.5 bg-neutral-100 px-3 py-1 rounded-full text-[11px] font-bold text-neutral-800 border border-neutral-200/70">
+                <RiShieldCheckLine className="w-3.5 h-3.5 text-neutral-800" />
                 <span>Verified Public Citizen Portal</span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center space-x-3">
-                <User className="w-8 h-8 text-emerald-400" />
+              <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 tracking-tight flex items-center space-x-2.5">
                 <span>Welcome, {user ? user.name : 'Muhammad Saad'}</span>
               </h1>
-              <p className="text-slate-400 mt-1 text-sm">
-                Access official municipal gazettes, verified legal citations, and explore interactive spatial policies.
+              <p className="text-xs text-neutral-500 max-w-2xl font-normal leading-relaxed">
+                Access official municipal gazettes, verified legal citations, explore interactive spatial policies, and ask questions to the grounded Gemini RAG assistant.
               </p>
             </div>
 
             <button
               onClick={onOpenMap}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-5 py-2.5 rounded-2xl shadow-lg shadow-emerald-600/30 flex items-center space-x-2 text-xs transition-all self-start md:self-auto"
+              className="bg-neutral-900 hover:bg-black text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all shadow-sm flex items-center space-x-2 cursor-pointer self-start md:self-auto shrink-0"
             >
-              <MapPin className="w-4 h-4" />
+              <FiCompass className="w-4 h-4" />
               <span>Launch Interactive Policy Map</span>
             </button>
           </div>
 
-          {/* ── Access Boundaries & Public Data Protection Banner ─────── */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+          {/* ── 2. Access Boundaries & Public Data Protection Banner ─────── */}
+          <div className="bg-white rounded-3xl p-6 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <div className="flex items-center space-x-2">
-                <Lock className="w-4 h-4 text-blue-400" />
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-800">
+                  <FiLock className="w-3.5 h-3.5" />
+                </div>
+                <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
                   Access Boundaries & Public Data Protection Active
                 </h3>
               </div>
-              <span className="bg-blue-500/20 text-blue-300 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border border-blue-500/30">
+              <span className="bg-emerald-50 text-emerald-800 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
                 Security Enforced
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              <div className="bg-slate-950/70 border border-slate-800/80 p-3 rounded-2xl space-y-1">
-                <div className="flex items-center space-x-1.5 text-blue-400 font-bold font-mono">
-                  <ShieldCheck className="w-3.5 h-3.5" />
+              <div className="bg-neutral-50 border border-neutral-200/80 p-4 rounded-2xl space-y-1.5">
+                <div className="flex items-center space-x-1.5 text-neutral-900 font-bold">
+                  <FiShield className="w-3.5 h-3.5 text-neutral-800" />
                   <span>Isolated Vector Namespace</span>
                 </div>
-                <p className="text-slate-400 text-[11px]">
-                  All public queries route strictly to <code className="text-slate-300">docucity_public_bylaws</code>, preventing exposure of internal or draft gazettes.
+                <p className="text-neutral-500 text-[11px] leading-relaxed">
+                  All public queries route strictly to <code className="text-neutral-900 font-semibold font-mono">docucity_public_bylaws</code>, preventing exposure of internal drafts.
                 </p>
               </div>
 
-              <div className="bg-slate-950/70 border border-slate-800/80 p-3 rounded-2xl space-y-1">
-                <div className="flex items-center space-x-1.5 text-emerald-400 font-bold font-mono">
-                  <Lock className="w-3.5 h-3.5" />
+              <div className="bg-neutral-50 border border-neutral-200/80 p-4 rounded-2xl space-y-1.5">
+                <div className="flex items-center space-x-1.5 text-emerald-800 font-bold">
+                  <FiLock className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Automated PII Redaction</span>
                 </div>
-                <p className="text-slate-400 text-[11px]">
+                <p className="text-neutral-500 text-[11px] leading-relaxed">
                   All public gazettes and searches are scrubbed of citizen CNIC numbers, phone records, and private property details.
                 </p>
               </div>
 
-              <div className="bg-slate-950/70 border border-slate-800/80 p-3 rounded-2xl space-y-1">
-                <div className="flex items-center space-x-1.5 text-amber-400 font-bold font-mono">
-                  <Eye className="w-3.5 h-3.5" />
+              <div className="bg-neutral-50 border border-neutral-200/80 p-4 rounded-2xl space-y-1.5">
+                <div className="flex items-center space-x-1.5 text-amber-800 font-bold">
+                  <FiEye className="w-3.5 h-3.5 text-amber-600" />
                   <span>Read-Only Public Scope</span>
                 </div>
-                <p className="text-slate-400 text-[11px]">
-                  Public users cannot modify zoning geometries or alter policy rules. Modifications require Municipal Officer clearance.
+                <p className="text-neutral-500 text-[11px] leading-relaxed">
+                  Public users can inspect policies and download gazettes. Zone geometry edits require Municipal Officer clearance.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* ── Feature Cards Section ──────────────────────────────────── */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-lg hover:border-emerald-500/40 transition-all flex flex-col justify-between">
-              <div>
-                <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mb-4">
-                  <MapPin className="w-6 h-6" />
+          {/* ── 3. THREE PROMINENT CLICKABLE FEATURE CARDS (MAP + RAG + LIBRARY) ── */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            
+            {/* Card 1: Interactive Spatial Map */}
+            <div 
+              onClick={onOpenMap}
+              className="bg-white border border-neutral-200/80 p-6 rounded-3xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] hover:border-neutral-900 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 bg-neutral-900 text-white rounded-2xl flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                  <FiMapPin className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-1">Interactive Spatial Map</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Click any plot or zone across Lahore to inspect FAR, heights, setbacks, and commercialization rules.
-                </p>
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 mb-1 tracking-tight">Interactive Spatial Map</h3>
+                  <p className="text-xs text-neutral-500 leading-relaxed">
+                    Click any plot or zone across Lahore to inspect FAR, permissible heights, setbacks, and commercialization rules.
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={onOpenMap}
-                className="mt-4 text-emerald-400 hover:text-emerald-300 text-xs font-bold flex items-center space-x-1"
-              >
-                <span>Open GIS Map &rarr;</span>
-              </button>
+              <div className="mt-4 text-xs font-bold text-neutral-900 group-hover:text-black flex items-center space-x-1.5 pt-2 border-t border-neutral-100">
+                <span>Open GIS Map</span>
+                <FiArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-lg hover:border-teal-500/40 transition-all flex flex-col justify-between">
-              <div>
-                <div className="w-12 h-12 bg-teal-500/20 text-teal-400 rounded-2xl flex items-center justify-center mb-4">
-                  <Sparkles className="w-6 h-6" />
+            {/* Card 2: Grounded Gemini RAG Assistant */}
+            <div 
+              onClick={onOpenMap}
+              className="bg-white border border-neutral-200/80 p-6 rounded-3xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] hover:border-neutral-900 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 bg-neutral-900 text-white rounded-2xl flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                  <HiOutlineSparkles className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-1">Grounded Gemini RAG Assistant</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Ask policy inquiries in English or Urdu Nastaliq with zero hallucinations and verified gazette citations.
-                </p>
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 mb-1 tracking-tight">Grounded Gemini RAG Assistant</h3>
+                  <p className="text-xs text-neutral-500 leading-relaxed">
+                    Ask policy inquiries in English or Urdu Nastaliq with zero hallucinations and verified official gazette citations.
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={onOpenMap}
-                className="mt-4 text-teal-400 hover:text-teal-300 text-xs font-bold flex items-center space-x-1"
-              >
-                <span>Start Bilingual Chat &rarr;</span>
-              </button>
+              <div className="mt-4 text-xs font-bold text-neutral-900 group-hover:text-black flex items-center space-x-1.5 pt-2 border-t border-neutral-100">
+                <span>Start Bilingual Chat</span>
+                <FiArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-lg hover:border-blue-500/40 transition-all flex flex-col justify-between">
-              <div>
-                <div className="w-12 h-12 bg-blue-500/20 text-blue-400 rounded-2xl flex items-center justify-center mb-4">
-                  <Book className="w-6 h-6" />
+            {/* Card 3: Public Policy Library */}
+            <div 
+              onClick={scrollToLibrary}
+              className="bg-white border border-neutral-200/80 p-6 rounded-3xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] hover:border-neutral-900 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 bg-neutral-900 text-white rounded-2xl flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                  <FiBook className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-1">Public Policy Library</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Faceted search & direct download of official, OCR-processed municipal gazette notifications.
-                </p>
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 mb-1 tracking-tight">Public Policy Library</h3>
+                  <p className="text-xs text-neutral-500 leading-relaxed">
+                    Faceted search & direct download of official, OCR-processed municipal gazette notifications.
+                  </p>
+                </div>
               </div>
-              <span className="mt-4 text-blue-400 text-xs font-bold flex items-center space-x-1">
-                <span>Browse {gazettes.length} Approved Gazettes &darr;</span>
-              </span>
+              <div className="mt-4 text-xs font-bold text-neutral-900 group-hover:text-black flex items-center space-x-1.5 pt-2 border-t border-neutral-100">
+                <span>Browse {gazettes.length} Approved Gazettes</span>
+                <FiArrowRight className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform" />
+              </div>
+            </div>
+
+          </div>
+
+          {/* ── 4. Quick Zoning & Sector Inspector ────────────────────── */}
+          <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 sm:p-7 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-5">
+            <div className="border-b border-neutral-100 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-xs">
+                  <FiMapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-neutral-900 tracking-tight">
+                    Sector & Plot Zoning Quick Inspector
+                  </h2>
+                  <p className="text-xs text-neutral-400">
+                    Select your locality across Lahore to immediately inspect sanctioned FAR, maximum heights, setbacks, and tariff tiers
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Sector Picker Pills */}
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Quick Select Common Lahore Sectors</p>
+              <div className="flex flex-wrap gap-2">
+                {sampleZones.map((z, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setSelectedZoneQuery(z.name);
+                      setZoneResult({
+                        zoneName: z.name,
+                        authority: z.authority,
+                        permittedLandUse: z.use,
+                        maxFAR: z.far,
+                        maxHeight: z.height,
+                        frontSetback: z.frontSetback,
+                        sideSetback: z.sideSetback,
+                        commercialFee: z.fee,
+                        gazetteRef: z.ref,
+                        waterTariff: 'Standard WASA Schedule'
+                      });
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border cursor-pointer ${
+                      selectedZoneQuery === z.name
+                        ? 'bg-neutral-900 text-white border-neutral-900 shadow-sm'
+                        : 'bg-neutral-50 hover:bg-white text-neutral-800 border-neutral-200'
+                    }`}
+                  >
+                    {z.name.split('(')[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Selected Sector Details Grid */}
+            <div className="bg-neutral-50/70 border border-neutral-200/90 rounded-3xl p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200/70 pb-3">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 block font-mono">SELECTED JURISDICTION</span>
+                  <h3 className="text-base font-bold text-neutral-900">{zoneResult.zoneName}</h3>
+                </div>
+                <span className="bg-neutral-900 text-white text-xs font-mono font-bold px-3 py-1 rounded-xl self-start sm:self-auto">
+                  {zoneResult.authority} Scope
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                <div className="bg-white p-3.5 rounded-2xl border border-neutral-200/80 shadow-xs space-y-0.5">
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Floor Area Ratio (FAR)</p>
+                  <p className="font-extrabold text-sm text-neutral-900">{zoneResult.maxFAR}</p>
+                  <p className="text-[11px] text-neutral-500">Permitted density limit</p>
+                </div>
+
+                <div className="bg-white p-3.5 rounded-2xl border border-neutral-200/80 shadow-xs space-y-0.5">
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Max Permissible Height</p>
+                  <p className="font-extrabold text-sm text-neutral-900">{zoneResult.maxHeight}</p>
+                  <p className="text-[11px] text-neutral-500">Subject to site clearance</p>
+                </div>
+
+                <div className="bg-white p-3.5 rounded-2xl border border-neutral-200/80 shadow-xs space-y-0.5">
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Mandatory Front Setback</p>
+                  <p className="font-extrabold text-sm text-neutral-900">{zoneResult.frontSetback}</p>
+                  <p className="text-[11px] text-neutral-500">Side Setback: {zoneResult.sideSetback}</p>
+                </div>
+
+                <div className="bg-white p-3.5 rounded-2xl border border-neutral-200/80 shadow-xs space-y-0.5">
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Permitted Land Use</p>
+                  <p className="font-bold text-neutral-900">{zoneResult.permittedLandUse}</p>
+                </div>
+
+                <div className="bg-white p-3.5 rounded-2xl border border-neutral-200/80 shadow-xs space-y-0.5">
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Commercial Conversion Fee</p>
+                  <p className="font-bold text-neutral-900">{zoneResult.commercialFee}</p>
+                </div>
+
+                <div className="bg-white p-3.5 rounded-2xl border border-neutral-200/80 shadow-xs space-y-0.5">
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Statutory Gazette Reference</p>
+                  <p className="font-bold text-neutral-900 font-mono text-[11px]">{zoneResult.gazetteRef}</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  onClick={onOpenMap}
+                  className="bg-neutral-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <span>View Coordinates on Policy Map</span>
+                  <FiArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* ── 4. Public Municipal Gazette & Policy Library ───────────── */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-800 pb-4">
-              <div>
-                <h2 className="text-xl font-bold text-white flex items-center space-x-2.5">
-                  <Book className="w-6 h-6 text-emerald-400" />
-                  <span>Public Municipal Gazette & Policy Library</span>
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Curated, searchable repository of approved government gazettes, building bylaws, and master plans.
-                </p>
+          {/* ── 5. Public Municipal Gazette & Policy Library ───────────── */}
+          <div id="gazette-library-section" className="bg-white border border-neutral-200/80 rounded-3xl p-6 sm:p-7 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-xs">
+                  <FiBook className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-neutral-900 tracking-tight">
+                    Public Municipal Gazette & Policy Library
+                  </h2>
+                  <p className="text-xs text-neutral-400">
+                    Curated, searchable repository of approved government gazettes, building bylaws, and master plans
+                  </p>
+                </div>
               </div>
-              <span className="text-xs text-slate-400 font-mono bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+              <span className="text-xs text-neutral-700 font-mono font-semibold bg-neutral-100 px-3 py-1 rounded-xl border border-neutral-200 self-start sm:self-auto">
                 Showing {filteredGazettes.length} of {gazettes.length} Gazettes
               </span>
             </div>
@@ -340,22 +567,22 @@ This is an authentic, legally grounded record retrieved from the DocuCity Lahore
             {/* Faceted Search & Filters */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="relative md:col-span-1">
-                <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
+                <FiSearch className="absolute left-3.5 top-3 w-4 h-4 text-neutral-400" />
                 <input 
                   type="text" 
                   placeholder="Search title, clause, or gazette #..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none font-mono"
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-10 pr-4 py-2 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:bg-white focus:outline-none transition-all"
                 />
               </div>
 
               <div className="relative">
-                <Filter className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
+                <FiFilter className="absolute left-3.5 top-3 w-4 h-4 text-neutral-400" />
                 <select 
                   value={selectedAuthority}
                   onChange={(e) => setSelectedAuthority(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none appearance-none cursor-pointer"
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-10 pr-4 py-2 text-xs text-neutral-800 font-medium focus:border-neutral-900 focus:bg-white focus:outline-none cursor-pointer"
                 >
                   <option value="All">All Issuing Authorities</option>
                   <option value="LDA">LDA (Lahore Development Authority)</option>
@@ -369,11 +596,11 @@ This is an authentic, legally grounded record retrieved from the DocuCity Lahore
               </div>
 
               <div className="relative">
-                <Filter className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
+                <FiFilter className="absolute left-3.5 top-3 w-4 h-4 text-neutral-400" />
                 <select 
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none appearance-none cursor-pointer"
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-10 pr-4 py-2 text-xs text-neutral-800 font-medium focus:border-neutral-900 focus:bg-white focus:outline-none cursor-pointer"
                 >
                   <option value="All">All Document Categories</option>
                   <option value="Building Bylaws">Building Bylaws</option>
@@ -387,11 +614,11 @@ This is an authentic, legally grounded record retrieved from the DocuCity Lahore
               </div>
 
               <div className="relative">
-                <Calendar className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
+                <FiCalendar className="absolute left-3.5 top-3 w-4 h-4 text-neutral-400" />
                 <select 
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none appearance-none cursor-pointer"
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-10 pr-4 py-2 text-xs text-neutral-800 font-medium focus:border-neutral-900 focus:bg-white focus:outline-none cursor-pointer"
                 >
                   <option value="All">All Publication Years</option>
                   <option value="2026">2026 Enactments</option>
@@ -409,42 +636,42 @@ This is an authentic, legally grounded record retrieved from the DocuCity Lahore
               {filteredGazettes.length > 0 ? filteredGazettes.map(g => (
                 <div
                   key={g.id}
-                  className="bg-slate-950 border border-slate-800/90 rounded-2xl p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-emerald-500/50 transition-all text-xs"
+                  className="bg-neutral-50/60 hover:bg-white border border-neutral-200/80 rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all text-xs shadow-xs"
                 >
                   <div className="flex items-start space-x-3.5 min-w-0">
-                    <div className="p-3 bg-slate-900 rounded-2xl text-emerald-400 shrink-0 border border-slate-800">
-                      <FileText className="w-5 h-5" />
+                    <div className="w-10 h-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-neutral-800 shrink-0 shadow-xs">
+                      <RiFileTextLine className="w-5 h-5" />
                     </div>
                     <div className="space-y-1.5 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-white text-sm truncate">{g.title}</span>
-                        <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded">
+                        <span className="font-bold text-neutral-900 text-sm truncate">{g.title}</span>
+                        <span className="bg-neutral-100 text-neutral-800 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-neutral-200">
                           {g.authority}
                         </span>
                       </div>
 
-                      <p className="text-slate-400 text-[11px] font-mono">
+                      <p className="text-neutral-500 text-[11px] font-mono">
                         {g.gazette_ref} · {g.clause}
                       </p>
 
-                      <div className="flex flex-wrap gap-2 text-[10px] font-mono text-slate-400 pt-0.5">
-                        <span className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                      <div className="flex flex-wrap gap-2 text-[10px] font-mono text-neutral-600 pt-0.5">
+                        <span className="bg-white px-2 py-0.5 rounded-md border border-neutral-200 font-semibold text-neutral-700">
                           {g.category}
                         </span>
-                        <span className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                        <span className="bg-white px-2 py-0.5 rounded-md border border-neutral-200">
                           Page {g.page}
                         </span>
-                        <span className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                        <span className="bg-white px-2 py-0.5 rounded-md border border-neutral-200">
                           {g.date}
                         </span>
-                        <span className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                        <span className="bg-white px-2 py-0.5 rounded-md border border-neutral-200">
                           {g.size}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2 shrink-0 self-end md:self-center">
+                  <div className="flex items-center space-x-2 shrink-0 self-end lg:self-center">
                     <button
                       onClick={() => setActivePdfModal({
                         document_title: g.title,
@@ -454,23 +681,23 @@ This is an authentic, legally grounded record retrieved from the DocuCity Lahore
                         gazette_ref: g.gazette_ref,
                         snippet: g.snippet
                       })}
-                      className="bg-slate-900 hover:bg-emerald-600 text-slate-200 hover:text-white px-3.5 py-2 rounded-xl font-bold transition-all border border-slate-800 hover:border-emerald-500 flex items-center space-x-1.5 shadow-sm text-xs cursor-pointer"
+                      className="bg-white hover:bg-neutral-50 text-neutral-800 px-3.5 py-1.5 rounded-xl font-semibold transition-all border border-neutral-200 flex items-center space-x-1.5 shadow-xs text-xs cursor-pointer"
                     >
-                      <Eye className="w-3.5 h-3.5" />
+                      <FiEye className="w-3.5 h-3.5 text-neutral-700" />
                       <span>Verify / Read PDF</span>
                     </button>
 
                     <button 
                       onClick={() => handleDownload(g)}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl font-bold transition-all shadow-md shadow-emerald-600/30 flex items-center space-x-1.5 text-xs cursor-pointer"
+                      className="bg-neutral-900 hover:bg-black text-white px-3.5 py-1.5 rounded-xl font-semibold transition-all shadow-sm flex items-center space-x-1.5 text-xs cursor-pointer"
                     >
-                      <Download className="w-3.5 h-3.5" />
+                      <FiDownload className="w-3.5 h-3.5" />
                       <span>Download</span>
                     </button>
                   </div>
                 </div>
               )) : (
-                <div className="text-center py-12 text-slate-500 font-mono text-xs">
+                <div className="text-center py-12 text-neutral-400 font-mono text-xs">
                   No public gazettes found matching the selected faceted filters.
                 </div>
               )}

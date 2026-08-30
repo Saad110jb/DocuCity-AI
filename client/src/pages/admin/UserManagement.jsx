@@ -1,8 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Users, ShieldAlert, CheckCircle2, UserCheck, Search, Filter, MoreVertical,
-  Plus, Shield, UserX, RefreshCw, Key, Lock, Eye, EyeOff, Building
-} from 'lucide-react';
+import { 
+  FiUsers, 
+  FiSearch, 
+  FiFilter, 
+  FiMoreVertical, 
+  FiPlus, 
+  FiShield, 
+  FiUserCheck, 
+  FiUserX, 
+  FiRefreshCw, 
+  FiKey, 
+  FiLock, 
+  FiEye, 
+  FiEyeOff, 
+  FiCheckCircle 
+} from 'react-icons/fi';
+import { 
+  RiBuildingLine, 
+  RiShieldCheckLine, 
+  RiGovernmentLine 
+} from 'react-icons/ri';
 import { ProvisionModal } from './ProvisionModal';
 import { fetchUsersList, updateUserStatusApi } from '../../services/api';
 
@@ -100,326 +117,219 @@ export function UserManagementPage({ globalSearchTerm = '', globalDepartmentFilt
     });
   }, [users, searchTerm, roleFilter, activeDeptFilter, statusFilter]);
 
-  // Metrics
-  const metrics = useMemo(() => {
-    const total = users.length;
-    const publicCount = users.filter((u) => u.role === 'public').length;
-    const officerCount = users.filter((u) => u.role === 'officer').length;
-    const adminCount = users.filter((u) => u.role === 'admin').length;
-    const activeOfficers = users.filter((u) => u.role === 'officer' && u.status === 'Active').length;
-    const pendingCount = users.filter((u) => u.status === 'Pending Verification').length;
-    const suspendedCount = users.filter((u) => u.status === 'Suspended').length;
-
-    return { total, publicCount, officerCount, adminCount, activeOfficers, pendingCount, suspendedCount };
-  }, [users]);
-
-  // Handlers for user actions updating MongoDB
-  const handleVerify = async (id) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'Active' } : u)));
-    setOpenDropdownId(null);
-    try {
-      await updateUserStatusApi(id, { status: 'Active' });
-    } catch (e) {
-      console.warn('Update DB status warning:', e);
-    }
-  };
-
-  const handleToggleSuspend = async (id, currentStatus) => {
-    const newStatus = currentStatus === 'Suspended' ? 'Active' : 'Suspended';
+  const handleToggleStatus = async (userId, currentStatus) => {
+    const newStatus = currentStatus === 'Active' ? 'Disabled' : 'Active';
     setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, status: newStatus } : u))
+      prev.map((u) => (u.id === userId ? { ...u, status: newStatus } : u))
     );
     setOpenDropdownId(null);
     try {
-      await updateUserStatusApi(id, { status: newStatus });
-    } catch (e) {
-      console.warn('Update DB status warning:', e);
-    }
-  };
-
-  const handleChangeRole = async (id, currentRole) => {
-    const newRole = currentRole === 'officer' ? 'admin' : 'officer';
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role: newRole } : u)));
-    setOpenDropdownId(null);
-    try {
-      await updateUserStatusApi(id, { role: newRole });
-    } catch (e) {
-      console.warn('Update DB role warning:', e);
-    }
+      await updateUserStatusApi(userId, newStatus);
+    } catch (e) {}
   };
 
   const handleProvisionSuccess = (newOfficer) => {
     setUsers((prev) => [newOfficer, ...prev]);
-    loadUsersFromDb();
   };
 
   return (
-    <div className="space-y-6">
-      {/* Key Metrics Header Cards */}
+    <div className="space-y-6 animate-fade-in font-sans">
+      
+      {/* ── Metric Summary Cards ────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Users */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Users</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center">
-              <Users className="w-4 h-4 text-purple-400" />
-            </div>
-          </div>
-          <p className="text-3xl font-extrabold text-white mt-2">{metrics.total}</p>
-          <p className="text-[11px] text-slate-400 mt-1">
-            <span className="text-purple-400 font-semibold">{metrics.officerCount} Officers</span> •{' '}
-            <span className="text-slate-300">{metrics.publicCount} Public</span> •{' '}
-            <span className="text-indigo-400">{metrics.adminCount} Admin</span>
+        <div className="bg-white rounded-3xl p-5 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)]">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Total Registered Accounts</p>
+          <p className="text-2xl font-extrabold text-neutral-900 mt-1">{users.length}</p>
+          <p className="text-[11px] text-neutral-500 font-mono mt-1">MongoDB Verified Database</p>
+        </div>
+
+        <div className="bg-white rounded-3xl p-5 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)]">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Municipal Officers</p>
+          <p className="text-2xl font-extrabold text-neutral-900 mt-1">
+            {users.filter((u) => u.role === 'officer').length}
           </p>
+          <p className="text-[11px] text-emerald-600 font-semibold mt-1">LDA / WASA / MCL Staff</p>
         </div>
 
-        {/* Active Officers */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Active Officers</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center">
-              <Building className="w-4 h-4 text-blue-400" />
-            </div>
-          </div>
-          <p className="text-3xl font-extrabold text-blue-400 mt-2">{metrics.activeOfficers}</p>
-          <p className="text-[11px] text-slate-400 mt-1">Across LDA, WASA, MCL, Urban Unit</p>
+        <div className="bg-white rounded-3xl p-5 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)]">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Public Citizens & Architects</p>
+          <p className="text-2xl font-extrabold text-neutral-900 mt-1">
+            {users.filter((u) => u.role === 'public' || u.role === 'citizen').length}
+          </p>
+          <p className="text-[11px] text-neutral-500 mt-1">Public statutory namespace</p>
         </div>
 
-        {/* Pending Verification */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Pending Verification</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
-              <ShieldAlert className="w-4 h-4 text-amber-400" />
-            </div>
-          </div>
-          <p className="text-3xl font-extrabold text-amber-400 mt-2">{metrics.pendingCount}</p>
-          <p className="text-[11px] text-slate-400 mt-1">Awaiting Super Admin Approval</p>
-        </div>
-
-        {/* Revoked / Suspended */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Suspended Access</span>
-            <div className="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center">
-              <UserX className="w-4 h-4 text-rose-400" />
-            </div>
-          </div>
-          <p className="text-3xl font-extrabold text-rose-400 mt-2">{metrics.suspendedCount}</p>
-          <p className="text-[11px] text-slate-400 mt-1">Security-locked accounts</p>
+        <div className="bg-white rounded-3xl p-5 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)]">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Super Administrators</p>
+          <p className="text-2xl font-extrabold text-neutral-900 mt-1">
+            {users.filter((u) => u.role === 'admin').length}
+          </p>
+          <p className="text-[11px] text-neutral-700 font-mono mt-1">Root governance clearance</p>
         </div>
       </div>
 
-      {/* Filter & Action Toolbar */}
-      <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
-          <input
-            type="text"
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
-            placeholder="Filter by Name, Email, Department, or CNIC..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
-          />
+      {/* ── Filter Bar & Actions ────────────────────────────────────── */}
+      <div className="bg-white rounded-3xl p-6 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 pb-4">
+          <div>
+            <h2 className="text-base font-bold text-neutral-900 tracking-tight">Identity & Role Directory</h2>
+            <p className="text-xs text-neutral-400">Manage officer credentials, department assignments, and access state</p>
+          </div>
+
+          <div className="flex items-center space-x-2 shrink-0">
+            <button
+              onClick={() => setShowPasswords(!showPasswords)}
+              className="bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-xs font-semibold px-3 py-2 rounded-xl transition-all border border-neutral-200 flex items-center space-x-1.5 cursor-pointer"
+            >
+              {showPasswords ? <FiEyeOff className="w-3.5 h-3.5" /> : <FiEye className="w-3.5 h-3.5" />}
+              <span>{showPasswords ? 'Hide Credentials' : 'Show Credentials'}</span>
+            </button>
+
+            <button
+              onClick={() => setIsProvisionOpen(true)}
+              className="bg-neutral-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer"
+            >
+              <FiPlus className="w-3.5 h-3.5" />
+              <span>Provision Officer</span>
+            </button>
+          </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-purple-500"
-          >
-            <option value="All">Role: All</option>
-            <option value="public">Public</option>
-            <option value="officer">Officer</option>
-            <option value="admin">Admin</option>
-          </select>
+        {/* Filter inputs */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div className="relative">
+            <FiSearch className="absolute left-3.5 top-3 w-4 h-4 text-neutral-400" />
+            <input
+              type="text"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              placeholder="Filter by name, email, or CNIC..."
+              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-10 pr-3 py-2 text-xs text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:border-neutral-900"
+            />
+          </div>
 
-          <select
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-purple-500"
-          >
-            <option value="All">Dept: All</option>
-            <option value="LDA">LDA</option>
-            <option value="WASA">WASA</option>
-            <option value="MCL">MCL</option>
-            <option value="Urban Unit">Urban Unit</option>
-          </select>
+          <div className="relative">
+            <FiFilter className="absolute left-3.5 top-3 w-4 h-4 text-neutral-400" />
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-10 pr-3 py-2 text-xs text-neutral-800 font-medium focus:bg-white focus:outline-none focus:border-neutral-900 cursor-pointer"
+            >
+              <option value="All">All Roles</option>
+              <option value="officer">Municipal Officers</option>
+              <option value="public">Public Citizens</option>
+              <option value="admin">Super Admins</option>
+            </select>
+          </div>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:border-purple-500"
-          >
-            <option value="All">Status: All</option>
-            <option value="Active">Active</option>
-            <option value="Pending Verification">Pending Verification</option>
-            <option value="Suspended">Suspended</option>
-          </select>
+          <div className="relative">
+            <FiFilter className="absolute left-3.5 top-3 w-4 h-4 text-neutral-400" />
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-10 pr-3 py-2 text-xs text-neutral-800 font-medium focus:bg-white focus:outline-none focus:border-neutral-900 cursor-pointer"
+            >
+              <option value="All">All Departments</option>
+              <option value="LDA">LDA (Lahore Development Authority)</option>
+              <option value="WASA">WASA (Water & Sanitation)</option>
+              <option value="MCL">MCL (Metropolitan Corporation)</option>
+              <option value="Urban Unit">Punjab Urban Unit</option>
+              <option value="Public Domain">Public Domain</option>
+            </select>
+          </div>
 
-          <button
-            onClick={() => setShowPasswords(!showPasswords)}
-            className={`text-xs px-3 py-2 rounded-xl border transition-all font-semibold flex items-center space-x-1 ${
-              showPasswords ? 'bg-purple-950/60 border-purple-800 text-purple-300' : 'bg-slate-950 border-slate-800 text-slate-400'
-            }`}
-          >
-            {showPasswords ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            <span>{showPasswords ? 'Hide Passwords' : 'Show Real Passwords'}</span>
-          </button>
-
-          <button
-            onClick={() => setIsProvisionOpen(true)}
-            className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-purple-600/30 flex items-center space-x-1.5 ml-auto"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Provision New Officer</span>
-          </button>
+          <div className="relative">
+            <FiFilter className="absolute left-3.5 top-3 w-4 h-4 text-neutral-400" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-10 pr-3 py-2 text-xs text-neutral-800 font-medium focus:bg-white focus:outline-none focus:border-neutral-900 cursor-pointer"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Active">Active Accounts</option>
+              <option value="Disabled">Disabled Accounts</option>
+            </select>
+          </div>
         </div>
-      </div>
 
-      {/* Interactive User Data Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
-              <tr>
-                <th className="p-4">User Profile & Real Password</th>
-                <th className="p-4">Assigned Role</th>
-                <th className="p-4">Department Access</th>
-                <th className="p-4">Access Status</th>
-                <th className="p-4">Last Active</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/80">
-              {filteredUsers.map((u) => (
-                <tr key={u.id} className="hover:bg-slate-950/40 transition-all">
-                  {/* User Profile & Real Readable Password */}
-                  <td className="p-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 font-bold text-xs text-slate-200 flex items-center justify-center shrink-0 mt-0.5">
-                        {u.initials}
-                      </div>
-                      <div className="space-y-1">
-                        <p className="font-bold text-white text-xs">{u.name}</p>
-                        <p className="text-[11px] text-slate-400 font-mono">{u.email}</p>
-                        <p className="text-[9px] text-slate-500 font-mono">CNIC: {u.cnic}</p>
-                        
-                        {/* Real Readable Password Pill */}
-                        {showPasswords && (
-                          <div className="mt-1 bg-slate-950 border border-purple-900/60 rounded-lg px-2.5 py-1 inline-flex items-center space-x-1.5 text-xs text-purple-300 font-mono">
-                            <Lock className="w-3 h-3 text-purple-400 shrink-0" />
-                            <span>{u.password || 'LDA-Lahore-2026!'}</span>
-                          </div>
-                        )}
-                      </div>
+        {/* ── Full User Records List ──────────────────────────────────── */}
+        <div className="space-y-3 pt-2">
+          {filteredUsers.length > 0 ? (
+            filteredUsers.map((user) => (
+              <div
+                key={user.id}
+                className="bg-neutral-50/60 hover:bg-white border border-neutral-200/80 rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all text-xs shadow-xs"
+              >
+                <div className="flex items-start space-x-3.5 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-neutral-900 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                    {user.initials || 'U'}
+                  </div>
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-bold text-neutral-900 text-sm truncate">{user.name}</span>
+                      <span
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                          user.role === 'admin'
+                            ? 'bg-neutral-900 text-white border-neutral-900'
+                            : user.role === 'officer'
+                            ? 'bg-neutral-100 text-neutral-800 border-neutral-200'
+                            : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        }`}
+                      >
+                        {user.role.toUpperCase()}
+                      </span>
                     </div>
-                  </td>
 
-                  {/* Role Badge */}
-                  <td className="p-4">
-                    {u.role === 'admin' && (
-                      <span className="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
-                        Super Admin
+                    <p className="text-neutral-500 font-mono text-[11px] truncate">
+                      {user.email} · CNIC: {user.cnic}
+                    </p>
+
+                    <div className="flex flex-wrap gap-2 text-[10px] font-mono text-neutral-600 pt-0.5">
+                      <span className="bg-white px-2 py-0.5 rounded-md border border-neutral-200 font-semibold text-neutral-700">
+                        {user.department}
                       </span>
-                    )}
-                    {u.role === 'officer' && (
-                      <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
-                        Municipal Officer
-                      </span>
-                    )}
-                    {u.role === 'public' && (
-                      <span className="bg-slate-800 text-slate-400 border border-slate-700 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
-                        Public Citizen
-                      </span>
-                    )}
-                  </td>
+                      {showPasswords && (
+                        <span className="bg-white px-2 py-0.5 rounded-md border border-neutral-200 text-neutral-800 font-mono">
+                          Pass: {user.password}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-                  {/* Department */}
-                  <td className="p-4">
-                    <span className="font-mono text-slate-300 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
-                      {u.department}
-                    </span>
-                  </td>
+                <div className="flex items-center space-x-3 shrink-0 self-end lg:self-center">
+                  <span
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border ${
+                      user.status === 'Active'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-rose-50 text-rose-800 border-rose-200'
+                    }`}
+                  >
+                    {user.status}
+                  </span>
 
-                  {/* Access Status */}
-                  <td className="p-4">
-                    {u.status === 'Active' && (
-                      <span className="inline-flex items-center space-x-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-full text-[10px] font-semibold">
-                        <CheckCircle2 className="w-3 h-3" />
-                        <span>Active</span>
-                      </span>
-                    )}
-                    {u.status === 'Pending Verification' && (
-                      <span className="inline-flex items-center space-x-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded-full text-[10px] font-semibold">
-                        <ShieldAlert className="w-3 h-3" />
-                        <span>Pending Approval</span>
-                      </span>
-                    )}
-                    {u.status === 'Suspended' && (
-                      <span className="inline-flex items-center space-x-1 bg-rose-500/10 text-rose-400 border border-rose-500/30 px-2.5 py-1 rounded-full text-[10px] font-semibold">
-                        <UserX className="w-3 h-3" />
-                        <span>Suspended</span>
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Last Active */}
-                  <td className="p-4 text-slate-400 text-xs font-mono">{u.lastActive}</td>
-
-                  {/* Actions Dropdown */}
-                  <td className="p-4 text-right relative">
-                    <button
-                      onClick={() => setOpenDropdownId(openDropdownId === u.id ? null : u.id)}
-                      className="p-1.5 text-slate-400 hover:text-white bg-slate-800 rounded-lg border border-slate-700"
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-
-                    {openDropdownId === u.id && (
-                      <div className="absolute right-4 top-12 z-30 w-48 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-1.5 text-left text-xs space-y-1 backdrop-blur-xl animate-fade-in">
-                        {u.status === 'Pending Verification' && (
-                          <button
-                            onClick={() => handleVerify(u.id)}
-                            className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-emerald-400 hover:bg-emerald-950/60 font-semibold"
-                          >
-                            <UserCheck className="w-3.5 h-3.5" />
-                            <span>Approve Credentials</span>
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => handleToggleSuspend(u.id, u.status)}
-                          className={`w-full flex items-center space-x-2 px-3 py-2 rounded-xl font-semibold ${
-                            u.status === 'Suspended'
-                              ? 'text-emerald-400 hover:bg-emerald-950/60'
-                              : 'text-rose-400 hover:bg-rose-950/60'
-                          }`}
-                        >
-                          <UserX className="w-3.5 h-3.5" />
-                          <span>{u.status === 'Suspended' ? 'Unsuspend Account' : 'Revoke / Suspend'}</span>
-                        </button>
-
-                        <button
-                          onClick={() => handleChangeRole(u.id, u.role)}
-                          className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800 font-medium"
-                        >
-                          <Shield className="w-3.5 h-3.5 text-purple-400" />
-                          <span>Toggle Role Scope</span>
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  <button
+                    onClick={() => handleToggleStatus(user.id, user.status)}
+                    className={`px-3 py-1.5 rounded-xl font-semibold transition-all border text-xs cursor-pointer ${
+                      user.status === 'Active'
+                        ? 'bg-white hover:bg-rose-50 text-rose-700 border-neutral-200 hover:border-rose-200'
+                        : 'bg-neutral-900 text-white hover:bg-black border-neutral-900'
+                    }`}
+                  >
+                    {user.status === 'Active' ? 'Disable' : 'Activate'}
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-12 text-neutral-400 font-mono text-xs">
+              No registered users found matching the search criteria.
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Provision Officer Modal */}
       <ProvisionModal
         isOpen={isProvisionOpen}
         onClose={() => setIsProvisionOpen(false)}

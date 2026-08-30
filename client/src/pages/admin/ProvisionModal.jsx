@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { X, UserPlus, Building, Mail, Key, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { 
+  FiX, 
+  FiUserPlus, 
+  FiMail, 
+  FiKey, 
+  FiCheckCircle, 
+  FiAlertCircle 
+} from 'react-icons/fi';
+import { 
+  RiBuildingLine, 
+  RiShieldCheckLine 
+} from 'react-icons/ri';
 import { provisionOfficerApi } from '../../services/api';
 
 export function ProvisionModal({ isOpen, onClose, onProvisionSuccess }) {
@@ -59,62 +70,62 @@ export function ProvisionModal({ isOpen, onClose, onProvisionSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fade-in">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg p-6 shadow-2xl relative space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/60 backdrop-blur-sm p-4 animate-fade-in font-sans">
+      <div className="bg-white border border-neutral-200/90 rounded-3xl w-full max-w-lg p-7 shadow-2xl relative space-y-6">
         <button
           onClick={onClose}
-          className="absolute right-5 top-5 text-slate-400 hover:text-white bg-slate-800 w-8 h-8 rounded-full flex items-center justify-center"
+          className="absolute right-6 top-6 text-neutral-400 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer"
         >
-          <X className="w-4 h-4" />
+          <FiX className="w-4 h-4" />
         </button>
 
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
-            <UserPlus className="w-5 h-5 text-blue-400" />
+          <div className="w-11 h-11 rounded-2xl bg-neutral-900 flex items-center justify-center text-white shadow-sm">
+            <FiUserPlus className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white">Provision New Municipal Officer</h2>
-            <p className="text-xs text-slate-400">Save & grant verified government role access in MongoDB</p>
+            <h2 className="text-base font-bold text-neutral-900 tracking-tight">Provision New Municipal Officer</h2>
+            <p className="text-xs text-neutral-500">Save & grant verified government role access in MongoDB database</p>
           </div>
         </div>
 
         {isSuccess ? (
           <div className="py-8 text-center space-y-3">
-            <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto animate-bounce" />
-            <h3 className="text-sm font-bold text-white">Officer Record Saved in MongoDB Database!</h3>
-            <p className="text-xs text-slate-400">Credentials and temporary passphrase emitted to user collection.</p>
+            <FiCheckCircle className="w-12 h-12 text-emerald-600 mx-auto animate-bounce" />
+            <h3 className="text-sm font-bold text-neutral-900">Officer Record Saved in MongoDB Database!</h3>
+            <p className="text-xs text-neutral-500">Credentials and temporary passphrase emitted to user collection.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="flex items-center space-x-2 text-xs bg-rose-950/60 border border-rose-800 text-rose-400 p-3 rounded-xl">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+              <div className="flex items-center space-x-2 text-xs bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl">
+                <FiAlertCircle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             <div>
-              <label className="text-xs text-slate-400 font-medium mb-1 block">Officer Full Name</label>
+              <label className="text-xs text-neutral-700 font-bold mb-1.5 block uppercase tracking-wider">Officer Full Name</label>
               <input
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="e.g. Officer Hamza Sheikh"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:border-neutral-900"
                 required
               />
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 font-medium mb-1 block">Official Government Email</label>
+              <label className="text-xs text-neutral-700 font-bold mb-1.5 block uppercase tracking-wider">Official Government Email</label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                <FiMail className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="hamza@lda.gop.pk"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono"
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:border-neutral-900 font-mono"
                   required
                 />
               </div>
@@ -122,11 +133,11 @@ export function ProvisionModal({ isOpen, onClose, onProvisionSuccess }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-slate-400 font-medium mb-1 block">Municipal Department</label>
+                <label className="text-xs text-neutral-700 font-bold mb-1.5 block uppercase tracking-wider">Municipal Department</label>
                 <select
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2.5 text-xs text-neutral-900 focus:bg-white focus:outline-none focus:border-neutral-900 cursor-pointer font-medium"
                 >
                   <option value="LDA">Lahore Development Authority (LDA)</option>
                   <option value="WASA">WASA Lahore</option>
@@ -136,11 +147,11 @@ export function ProvisionModal({ isOpen, onClose, onProvisionSuccess }) {
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 font-medium mb-1 block">Role Scope & Permissions</label>
+                <label className="text-xs text-neutral-700 font-bold mb-1.5 block uppercase tracking-wider">Role Scope & Permissions</label>
                 <select
                   value={scope}
                   onChange={(e) => setScope(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2.5 text-xs text-neutral-900 focus:bg-white focus:outline-none focus:border-neutral-900 cursor-pointer font-medium"
                 >
                   <option value="full">Full Officer (Ingestion + OCR + Publishing)</option>
                   <option value="ingestion">Document Ingestion Only</option>
@@ -150,14 +161,14 @@ export function ProvisionModal({ isOpen, onClose, onProvisionSuccess }) {
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 font-medium mb-1 block">Initial Temporary Passphrase</label>
+              <label className="text-xs text-neutral-700 font-bold mb-1.5 block uppercase tracking-wider">Initial Temporary Passphrase</label>
               <div className="relative">
-                <Key className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                <FiKey className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
                 <input
                   type="text"
                   value={tempPassword}
                   onChange={(e) => setTempPassword(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white font-mono"
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-neutral-900 font-mono focus:bg-white focus:outline-none focus:border-neutral-900"
                 />
               </div>
             </div>
@@ -165,7 +176,7 @@ export function ProvisionModal({ isOpen, onClose, onProvisionSuccess }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-3 rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2"
+              className="w-full bg-neutral-900 hover:bg-black text-white font-semibold text-xs py-3 rounded-xl transition-all shadow-sm flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-70"
             >
               {loading ? (
                 <>
@@ -174,7 +185,7 @@ export function ProvisionModal({ isOpen, onClose, onProvisionSuccess }) {
                 </>
               ) : (
                 <>
-                  <UserPlus className="w-4 h-4" />
+                  <FiUserPlus className="w-4 h-4" />
                   <span>Confirm & Save Officer to MongoDB</span>
                 </>
               )}

@@ -1,17 +1,38 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Map, MapPin, Layers, AlertTriangle, ArrowLeft, Save,
-  Search, ShieldCheck, RefreshCw, Compass, Sparkles,
-  Navigation, Satellite, Eye, CheckCircle2, XCircle
-} from 'lucide-react';
+import { 
+  FiMapPin, 
+  FiLayers, 
+  FiAlertTriangle, 
+  FiArrowLeft, 
+  FiSave, 
+  FiSearch, 
+  FiShield, 
+  FiRefreshCw, 
+  FiCompass, 
+  FiEye, 
+  FiCheckCircle, 
+  FiXCircle,
+  FiSliders,
+  FiNavigation,
+  FiEdit,
+  FiMaximize2
+} from 'react-icons/fi';
+import { 
+  RiFileTextLine, 
+  RiShieldCheckLine, 
+  RiMapPinLine 
+} from 'react-icons/ri';
+import { 
+  HiOutlineSparkles 
+} from 'react-icons/hi2';
 import { useSpatialStudio } from '../../hooks/useSpatialStudio';
 import { MapContainerComponent } from '../../components/map/MapContainer';
+import { OfficerHeader } from '../../components/officer/OfficerHeader';
 
 // ── Leaflet CSS (must load exactly once) ─────────────────────────────────────
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Fix Leaflet's default icon path broken by Vite bundling
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -19,7 +40,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-export function SpatialGisStudioPage({ onBack, department = 'LDA' }) {
+export function SpatialGisStudioPage({ onBack, department = 'LDA', officerUser, onOfficerLogout, setActiveView }) {
   const {
     resolveLocationToPolygon,
     generateRoadCorridor,
@@ -30,29 +51,24 @@ export function SpatialGisStudioPage({ onBack, department = 'LDA' }) {
     loading,
   } = useSpatialStudio();
 
-  // ── Spatial Resolution State ─────────────────────────────────────────────
   const [locationQuery, setLocationQuery] = useState('Johar Town Phase 2');
   const [activePolygon, setActivePolygon] = useState({
     name: 'Johar Town Phase 2 Zone',
     coordinates: [[74.270, 31.460], [74.300, 31.460], [74.300, 31.485], [74.270, 31.485], [74.270, 31.460]],
   });
 
-  // ── Road Corridor State ──────────────────────────────────────────────────
   const [roadName, setRoadName] = useState('Main Boulevard Gulberg');
   const [bufferMeters, setBufferMeters] = useState(30);
   const [corridorPolygon, setCorridorPolygon] = useState(null);
 
-  // ── Layer Management State ────────────────────────────────────────────────
   const [layers, setLayers] = useState([]);
   const [layerSearchTerm, setLayerSearchTerm] = useState('');
   const [layerDepartmentFilter, setLayerDepartmentFilter] = useState('All');
   const [selectedLayerId, setSelectedLayerId] = useState('layer-lda-gulberg');
   const [saveNotice, setSaveNotice] = useState('');
 
-  // ── Map interaction state ─────────────────────────────────────────────────
   const [selectedZone, setSelectedZone] = useState(null);
 
-  // ── Load Spatial Layers on mount ─────────────────────────────────────────
   useEffect(() => {
     async function loadLayers() {
       const data = await fetchDepartmentLayers('All');
@@ -61,7 +77,6 @@ export function SpatialGisStudioPage({ onBack, department = 'LDA' }) {
     loadLayers();
   }, []);
 
-  // ── Build GeoJSON FeatureCollection for the Leaflet map ──────────────────
   const geoJsonData = useMemo(() => {
     const features = layers
       .filter(l => l.geojson && l.geojson.geometry)
@@ -70,26 +85,24 @@ export function SpatialGisStudioPage({ onBack, department = 'LDA' }) {
         geometry: l.geojson.geometry,
         properties: {
           ...l.geojson.properties,
-          // Ensure top-level fields are always in properties
-          zone_name:    l.geojson.properties?.zone_name  || l.name,
-          zone_code:    l.geojson.properties?.zone_code  || l.layerId,
-          zone_type:    l.geojson.properties?.zone_type  || l.zone_type || 'Residential',
-          authority:    l.geojson.properties?.authority  || l.authority || l.department,
-          far:          l.geojson.properties?.far        || l.far || '',
-          max_height_ft:l.geojson.properties?.max_height_ft || l.max_height_ft || null,
+          zone_name: l.geojson.properties?.zone_name || l.name,
+          zone_code: l.geojson.properties?.zone_code || l.layerId,
+          zone_type: l.geojson.properties?.zone_type || l.zone_type || 'Residential',
+          authority: l.geojson.properties?.authority || l.authority || l.department,
+          far: l.geojson.properties?.far || l.far || '',
+          max_height_ft: l.geojson.properties?.max_height_ft || l.max_height_ft || null,
           setback_front_ft: l.geojson.properties?.setback_front_ft || l.setback_front_ft || null,
-          setback_side_ft:  l.geojson.properties?.setback_side_ft  || l.setback_side_ft  || null,
+          setback_side_ft: l.geojson.properties?.setback_side_ft || l.setback_side_ft || null,
           commercialization_status: l.geojson.properties?.commercialization_status || l.commercialization_status || 'None',
           dc_rate_percent: l.geojson.properties?.dc_rate_percent || l.dc_rate_percent || null,
           gazette_reference: l.geojson.properties?.gazette_reference || l.gazette_reference || '',
           permitted_uses: l.geojson.properties?.permitted_uses || l.permitted_uses || [],
-          category:     l.geojson.properties?.category   || '',
-          color:        l.color,
-          layerId:      l.layerId || l.id,
+          category: l.geojson.properties?.category || '',
+          color: l.color,
+          layerId: l.layerId || l.id,
         },
       }));
 
-    // Also add the actively resolved polygon if it exists
     if (corridorPolygon) {
       features.push({
         type: 'Feature',
@@ -99,195 +112,194 @@ export function SpatialGisStudioPage({ onBack, department = 'LDA' }) {
           zone_code: 'CORR-BUFFER',
           zone_type: 'Commercial',
           authority: department,
-          category: `${bufferMeters}m Road Corridor Buffer`,
-          color: '#A855F7',
-        },
+          far: '1:8',
+          max_height_ft: 120,
+          setback_front_ft: 20,
+          commercialization_status: 'Permanent (List A)',
+          color: '#8B5CF6',
+          layerId: 'corridor-temp'
+        }
       });
     }
 
-    return features.length > 0
-      ? { type: 'FeatureCollection', features }
-      : null;
-  }, [layers, corridorPolygon, roadName, bufferMeters, department]);
+    return {
+      type: 'FeatureCollection',
+      features,
+    };
+  }, [layers, corridorPolygon, roadName, department]);
 
-  // ── Filtered layers list (sidebar) ───────────────────────────────────────
-  const filteredLayers = layers.filter(l => {
-    const matchesDept =
-      layerDepartmentFilter === 'All' ||
-      l.department.toUpperCase().includes(layerDepartmentFilter.toUpperCase());
-    const matchesSearch =
-      l.name.toLowerCase().includes(layerSearchTerm.toLowerCase()) ||
-      (l.layerId || '').toLowerCase().includes(layerSearchTerm.toLowerCase());
-    return matchesDept && matchesSearch;
-  });
-
-  // ── Zone click → auto-run conflict detection ──────────────────────────────
-  const handleZoneSelected = async (zone) => {
-    setSelectedZone(zone);
-    if (zone) {
-      await checkConflicts(department, {
-        type: 'Polygon',
-        coordinates: activePolygon.coordinates ? [activePolygon.coordinates] : [],
-      }, zone.zone_type);
-    }
-  };
-
-  // ── 1. Geocode & Resolve Boundary ────────────────────────────────────────
   const handleResolveLocation = async (e) => {
     e.preventDefault();
     if (!locationQuery) return;
-    const geojson = await resolveLocationToPolygon(locationQuery);
-    if (geojson && geojson.geometry) {
-      setActivePolygon({ name: locationQuery, coordinates: geojson.geometry.coordinates[0] });
-      await checkConflicts(department, geojson.geometry);
+    const poly = await resolveLocationToPolygon(locationQuery);
+    if (poly) {
+      setActivePolygon(poly);
+      checkConflicts(poly.coordinates, department);
     }
   };
 
-  // ── 2. Generate Linear Corridor Buffer ───────────────────────────────────
   const handleGenerateCorridor = async (e) => {
     e.preventDefault();
     if (!roadName) return;
-    const polygon = await generateRoadCorridor(roadName, bufferMeters);
-    if (polygon) {
-      setCorridorPolygon(polygon);
-      await checkConflicts(department, polygon);
+    const corr = await generateRoadCorridor(roadName, bufferMeters);
+    if (corr) {
+      setCorridorPolygon(corr);
+      checkConflicts(corr.coordinates, department);
     }
   };
 
-  // ── 3. Save Vertex Geometry to MongoDB ───────────────────────────────────
   const handleSaveGeometry = async () => {
-    if (!selectedLayerId) return;
-    const res = await saveLayerGeometry(selectedLayerId, {
+    const coordsToSave = activePolygon?.coordinates || corridorPolygon?.coordinates;
+    if (!coordsToSave) {
+      setSaveNotice('No active polygon to save. Resolve a location first.');
+      setTimeout(() => setSaveNotice(''), 3000);
+      return;
+    }
+    const success = await saveLayerGeometry(selectedLayerId, {
       type: 'Polygon',
-      coordinates: [activePolygon.coordinates],
+      coordinates: coordsToSave,
     });
-    if (res) {
-      setSaveNotice(`Geometry saved to MongoDB spatiallayers for ${selectedLayerId}!`);
+    if (success) {
+      setSaveNotice(`Saved polygon geometry to MongoDB layer: ${selectedLayerId}`);
       setTimeout(() => setSaveNotice(''), 3500);
+      const updated = await fetchDepartmentLayers('All');
+      setLayers(updated);
     }
   };
+
+  const filteredLayers = layers.filter(l => {
+    const matchesSearch = l.name.toLowerCase().includes(layerSearchTerm.toLowerCase()) ||
+                          l.layerId.toLowerCase().includes(layerSearchTerm.toLowerCase()) ||
+                          (l.zone_type || '').toLowerCase().includes(layerSearchTerm.toLowerCase()) ||
+                          (l.department || '').toLowerCase().includes(layerSearchTerm.toLowerCase());
+    const matchesDept = layerDepartmentFilter === 'All' || l.department === layerDepartmentFilter;
+    return matchesSearch && matchesDept;
+  });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans overflow-y-auto">
+    <div className="min-h-screen bg-[#F4F6F8] text-neutral-900 font-sans flex flex-col selection:bg-neutral-900 selection:text-white">
+      
+      {/* Universal Officer Header */}
+      <OfficerHeader
+        activeView="gis"
+        setActiveView={setActiveView || (() => {})}
+        assignedDepartment={department}
+        officerUser={officerUser}
+        onOfficerLogout={onOfficerLogout}
+      />
 
-      {/* ── Header Bar ────────────────────────────────────────────────────── */}
-      <header className="h-16 bg-slate-900/90 border-b border-slate-800 px-6 flex items-center justify-between z-10 backdrop-blur-md shrink-0 sticky top-0">
-        <div className="flex items-center space-x-4">
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 transition-all flex items-center space-x-1 text-xs font-semibold"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Portal</span>
-            </button>
-          )}
-          <div>
-            <h1 className="font-bold text-sm text-white flex items-center space-x-2">
-              <Compass className="w-4 h-4 text-blue-400" />
-              <span>All-Lahore Spatial Policy & GIS Mapping Studio</span>
-            </h1>
-            <p className="text-[10px] text-slate-400 font-mono">
-              OpenStreetMap Geocoding · Color-Coded Zoning · Click-to-Inspect Policy Cards · Multi-Dept Conflict Detection
+      {/* Main Studio Body */}
+      <div className="p-6 sm:p-8 space-y-6 max-w-7xl w-full mx-auto">
+        
+        {/* Studio Sub-Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-3xl p-6 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)]">
+          <div className="space-y-1">
+            <div className="inline-flex items-center space-x-1.5 bg-neutral-100 px-3 py-1 rounded-full text-[11px] font-bold text-neutral-800 border border-neutral-200/70">
+              <FiCompass className="w-3.5 h-3.5 text-neutral-800" />
+              <span>Interactive Leaflet Vector Engine Active</span>
+            </div>
+            <h2 className="text-xl font-bold text-neutral-900 tracking-tight">
+              Spatial GIS Studio & Urban Zoning Geometry
+            </h2>
+            <p className="text-xs text-neutral-500 max-w-2xl font-normal">
+              Resolve administrative boundaries, generate linear road buffers, and inspect complete municipal GIS layers.
             </p>
+          </div>
+
+          <div className="flex items-center space-x-3 shrink-0">
+            {saveNotice && (
+              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 animate-fade-in">
+                {saveNotice}
+              </span>
+            )}
+            <button
+              onClick={handleSaveGeometry}
+              className="bg-neutral-900 hover:bg-black text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer"
+            >
+              <FiSave className="w-3.5 h-3.5" />
+              <span>Save Geometry Edits</span>
+            </button>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
-          {saveNotice && (
-            <span className="text-xs bg-emerald-950 text-emerald-400 border border-emerald-800 px-3 py-1 rounded-full font-mono animate-pulse">
-              {saveNotice}
-            </span>
-          )}
-          <span className="text-xs font-mono font-bold text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/30">
-            {department} GIS Scope
-          </span>
-          <button
-            onClick={handleSaveGeometry}
-            className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center space-x-1.5"
-          >
-            <Save className="w-4 h-4" />
-            <span>Save Vertex Edits to MongoDB</span>
-          </button>
-        </div>
-      </header>
-
-      {/* ── Page Content ──────────────────────────────────────────────────── */}
-      <div className="p-6 space-y-6">
+        {/* Top Two Columns: Tools & Interactive Vector Map */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-          {/* ════ LEFT PANEL (4 cols) ════════════════════════════════════════ */}
+          {/* LEFT TOOLS COLUMN (4 cols) */}
           <div className="lg:col-span-4 space-y-5">
-
-            {/* TOOL 1: Automated Spatial Resolution */}
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
-              <div className="border-b border-slate-800 pb-2">
-                <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-1.5">
-                  <MapPin className="w-4 h-4 text-blue-400" />
-                  <span>Automated Spatial Resolution</span>
-                </h2>
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  Convert Lahore place names / Union Councils into GeoJSON polygons via OSM
-                </p>
+            
+            {/* Tool 1: Geocoding & Boundary Resolution */}
+            <div className="bg-white rounded-3xl p-5 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-3.5">
+              <div className="flex items-center space-x-2 border-b border-neutral-100 pb-3">
+                <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-800">
+                  <FiMapPin className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">Spatial Boundary Resolution</h3>
+                  <p className="text-[10px] text-neutral-400">Resolve Lahore sectors into GeoJSON</p>
+                </div>
               </div>
+
               <form onSubmit={handleResolveLocation} className="space-y-3">
                 <div>
-                  <label className="text-[11px] text-slate-400 font-semibold mb-1 block">
-                    Location / Union Council Name
-                  </label>
+                  <label className="text-[11px] font-semibold text-neutral-700 block mb-1">Location / Sector Name</label>
                   <div className="relative">
-                    <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                    <FiSearch className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-2.5" />
                     <input
                       type="text"
                       value={locationQuery}
                       onChange={(e) => setLocationQuery(e.target.value)}
-                      placeholder="e.g. Johar Town Phase 2 / Gulberg III / DHA Phase 6"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
+                      placeholder="e.g. Johar Town Phase 2, Gulberg III"
+                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900"
                     />
                   </div>
                 </div>
+
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-bold py-2 rounded-xl transition-all shadow-md flex items-center justify-center space-x-1.5"
+                  className="w-full bg-neutral-900 hover:bg-black text-white text-xs font-semibold py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center space-x-1.5 disabled:opacity-60 cursor-pointer"
                 >
-                  <Compass className="w-3.5 h-3.5" />
-                  <span>{loading ? 'Resolving Polygon via OSM…' : 'Geocode & Resolve Boundary'}</span>
+                  <FiCompass className="w-3.5 h-3.5" />
+                  <span>{loading ? 'Resolving Boundary…' : 'Geocode & Resolve Boundary'}</span>
                 </button>
               </form>
+
               {activePolygon?.name && (
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl px-3 py-2 text-[10px] font-mono text-blue-300">
-                  Active: <span className="font-bold text-white">{activePolygon.name}</span>
+                <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-2.5 text-[11px] font-mono text-neutral-700">
+                  Active Polygon: <span className="font-bold text-neutral-900">{activePolygon.name}</span>
                 </div>
               )}
             </div>
 
-            {/* TOOL 2: Linear Road Corridor Mapping */}
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
-              <div className="border-b border-slate-800 pb-2">
-                <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-1.5">
-                  <Navigation className="w-4 h-4 text-purple-400" />
-                  <span>Corridor & Linear Policy Mapping</span>
-                </h2>
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  Generate road centerline buffer polygons (Main Blvd, Ferozepur Rd, Ring Rd)
-                </p>
+            {/* Tool 2: Road Corridor Centerline Mapping */}
+            <div className="bg-white rounded-3xl p-5 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-3.5">
+              <div className="flex items-center space-x-2 border-b border-neutral-100 pb-3">
+                <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-800">
+                  <FiNavigation className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">Linear Road Corridor Buffer</h3>
+                  <p className="text-[10px] text-neutral-400">Generate commercial road buffers</p>
+                </div>
               </div>
+
               <form onSubmit={handleGenerateCorridor} className="space-y-3">
                 <div>
-                  <label className="text-[11px] text-slate-400 font-semibold mb-1 block">Linear Road Name</label>
+                  <label className="text-[11px] font-semibold text-neutral-700 block mb-1">Road Spine Name</label>
                   <input
                     type="text"
                     value={roadName}
                     onChange={(e) => setRoadName(e.target.value)}
-                    placeholder="e.g. Main Boulevard Gulberg / Ferozepur Road"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                    placeholder="e.g. Main Boulevard Gulberg"
+                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-1.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900"
                   />
                 </div>
+
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-[11px] text-slate-400 font-semibold">Corridor Buffer Distance</label>
-                    <span className="text-xs font-mono font-bold text-purple-400">{bufferMeters} meters</span>
+                    <label className="text-[11px] font-semibold text-neutral-700">Buffer Width</label>
+                    <span className="text-xs font-mono font-bold text-neutral-900">{bufferMeters}m</span>
                   </div>
                   <input
                     type="range"
@@ -296,234 +308,185 @@ export function SpatialGisStudioPage({ onBack, department = 'LDA' }) {
                     step={5}
                     value={bufferMeters}
                     onChange={(e) => setBufferMeters(Number(e.target.value))}
-                    className="w-full accent-purple-500 cursor-pointer"
+                    className="w-full accent-neutral-900 cursor-pointer"
                   />
                 </div>
+
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-60 text-white text-xs font-bold py-2 rounded-xl transition-all shadow-md flex items-center justify-center space-x-1.5"
+                  className="w-full bg-neutral-900 hover:bg-black text-white text-xs font-semibold py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center space-x-1.5 disabled:opacity-60 cursor-pointer"
                 >
-                  <Navigation className="w-3.5 h-3.5" />
-                  <span>{loading ? 'Computing Linear Buffer…' : 'Generate Linear Road Corridor'}</span>
+                  <FiSliders className="w-3.5 h-3.5" />
+                  <span>{loading ? 'Computing Buffer…' : 'Generate Corridor Buffer'}</span>
                 </button>
               </form>
-              {corridorPolygon && (
-                <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl px-3 py-2 text-[10px] font-mono text-purple-300">
-                  Corridor: <span className="font-bold text-white">{roadName}</span> — {bufferMeters}m buffer rendered on map
-                </div>
-              )}
             </div>
 
-            {/* TOOL 3: All-Lahore Multi-Department Layer Panel */}
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
-              <div className="border-b border-slate-800 pb-2 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-1.5">
-                    <Layers className="w-4 h-4 text-cyan-400" />
-                    <span>Spatial Layers ({filteredLayers.length})</span>
-                  </h2>
-                  <p className="text-[10px] text-slate-400 mt-0.5">LDA · WASA · MCL · DHA · Walled City · Urban Unit</p>
-                </div>
-                <span className="bg-cyan-500/20 text-cyan-300 text-[9px] font-mono px-2 py-0.5 rounded border border-cyan-500/30 font-bold">
-                  MONGODB
+          </div>
+
+          {/* RIGHT MAP CONTAINER (8 cols) */}
+          <div className="lg:col-span-8 space-y-4">
+            <div className="bg-white rounded-3xl p-4 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] h-[520px] flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between pb-3 px-2 border-b border-neutral-100">
+                <span className="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
+                  <RiMapPinLine className="w-4 h-4 text-neutral-800" />
+                  <span>Lahore Metropolitan Interactive Vector Map</span>
+                </span>
+                <span className="text-[10px] text-neutral-500 font-mono">
+                  Real-time Leaflet Canvas
                 </span>
               </div>
 
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  value={layerSearchTerm}
-                  onChange={(e) => setLayerSearchTerm(e.target.value)}
-                  placeholder="Filter layers (Gulberg, WASA, DHA, Heritage)…"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+              <div className="flex-1 rounded-2xl overflow-hidden mt-3 border border-neutral-200 relative">
+                <MapContainerComponent
+                  geoJsonData={geoJsonData}
+                  onZoneSelect={(zone) => setSelectedZone(zone)}
+                  selectedZone={selectedZone}
                 />
-                <div className="flex flex-wrap gap-1">
-                  {['All', 'LDA', 'WASA', 'MCL', 'DHA Lahore', 'Walled City Authority', 'Urban Unit'].map((dept) => (
-                    <button
-                      key={dept}
-                      onClick={() => setLayerDepartmentFilter(dept)}
-                      className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition-all ${
-                        layerDepartmentFilter === dept
-                          ? 'bg-cyan-600 text-white border-cyan-500'
-                          : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-                      }`}
-                    >
-                      {dept}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {filteredLayers.map((l) => {
-                  const layerZoneType = l.zone_type || l.geojson?.properties?.zone_type || '';
-                  return (
-                    <div
-                      key={l.layerId || l.id}
-                      onClick={() => setSelectedLayerId(l.layerId || l.id)}
-                      className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between text-xs ${
-                        selectedLayerId === (l.layerId || l.id)
-                          ? 'bg-slate-950 border-blue-500 ring-1 ring-blue-500/50'
-                          : 'bg-slate-950/40 border-slate-800 hover:border-slate-700'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2 min-w-0">
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: l.color }} />
-                        <div className="min-w-0">
-                          <p className="font-bold text-slate-200 text-[11px] leading-snug truncate max-w-[160px]">
-                            {l.name}
-                          </p>
-                          {layerZoneType && (
-                            <p className="text-[9px] text-slate-500 font-mono">{layerZoneType}</p>
-                          )}
-                        </div>
-                      </div>
-                      <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-blue-400 border border-slate-800 shrink-0">
-                        {l.department}
-                      </span>
-                    </div>
-                  );
-                })}
               </div>
             </div>
           </div>
 
-          {/* ════ RIGHT PANEL (8 cols) ═══════════════════════════════════════ */}
-          <div className="lg:col-span-8 space-y-5">
+        </div>
 
-            {/* Interactive Leaflet GIS Canvas */}
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center space-x-2">
-                  <Map className="w-5 h-5 text-blue-400" />
-                  <h2 className="text-xs font-bold text-white uppercase tracking-wider">
-                    Leaflet.js Interactive GIS Map — Lahore Spatial Layers
-                  </h2>
-                </div>
-                <div className="flex items-center space-x-2 text-[10px] font-mono text-slate-400">
-                  <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
-                    CRS: EPSG:4326 / UTM 43N
-                  </span>
-                  <span className="bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-500/30 font-bold">
-                    {layers.length} Layers Active
-                  </span>
-                </div>
+        {/* COMPLETE PROPER FULL-WIDTH ACTIVE GIS LAYERS SECTION (Rows like Analytics Page) */}
+        <div className="bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-xs">
+                <FiLayers className="w-5 h-5" />
               </div>
-
-              {/* Leaflet Map Container */}
-              <div className="relative w-full" style={{ height: '480px' }}>
-                {loading && layers.length === 0 ? (
-                  <div className="absolute inset-0 bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-800">
-                    <div className="text-center space-y-2">
-                      <RefreshCw className="w-8 h-8 text-blue-400 animate-spin mx-auto" />
-                      <p className="text-xs text-slate-400 font-mono">Loading All-Lahore GIS Layers…</p>
-                    </div>
-                  </div>
-                ) : (
-                  <MapContainerComponent
-                    geoJsonData={geoJsonData}
-                    selectedZone={selectedZone}
-                    setSelectedZone={handleZoneSelected}
-                    conflicts={conflicts}
-                    onAskRag={(query, zoneCode) => console.log('RAG Query:', query, zoneCode)}
-                  />
-                )}
-              </div>
-
-              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                <span>
-                  Click any polygon to open the Policy Inspector Card. Zoom & pan enabled.
-                </span>
-                <span className="text-blue-400 font-bold">OSM Geocoding · EPSG:32643 Buffer Engine</span>
+              <div>
+                <h3 className="text-base font-bold text-neutral-900 tracking-tight">
+                  Active GIS Spatial Layers ({filteredLayers.length})
+                </h3>
+                <p className="text-xs text-neutral-400">
+                  Comprehensive repository of statutory zoning geometries, land-use classifications, and setback rules
+                </p>
               </div>
             </div>
 
-            {/* Spatial Conflict Detection Alert Panel */}
-            <div className={`border rounded-3xl p-5 shadow-2xl space-y-3 ${
-              conflicts.length > 0
-                ? 'bg-amber-950/30 border-amber-500/40'
-                : 'bg-slate-900 border-slate-800'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-xs font-bold text-amber-300">
-                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>Topological Spatial Conflict Detection — Multi-Department Analysis</span>
-                </div>
-                <span className={`text-[10px] px-2.5 py-1 rounded-full font-mono font-bold ${
-                  conflicts.length > 0
-                    ? 'bg-amber-500/20 text-amber-300'
-                    : 'bg-emerald-500/20 text-emerald-300'
-                }`}>
-                  {conflicts.length > 0
-                    ? `${conflicts.length} Overlap Conflict${conflicts.length > 1 ? 's' : ''} Detected`
-                    : 'No Conflicts Found'}
-                </span>
+            <div className="flex items-center space-x-3">
+              {/* Department Filter Selector */}
+              <select
+                value={layerDepartmentFilter}
+                onChange={(e) => setLayerDepartmentFilter(e.target.value)}
+                className="bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-1.5 text-xs text-neutral-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10 cursor-pointer font-medium"
+              >
+                <option value="All">All Departments</option>
+                <option value="LDA">LDA Only</option>
+                <option value="WASA">WASA Only</option>
+                <option value="MCL">MCL Only</option>
+                <option value="Urban Unit">Urban Unit Only</option>
+              </select>
+
+              {/* Search Bar */}
+              <div className="relative w-full sm:w-64">
+                <FiSearch className="absolute left-3 top-2.5 w-3.5 h-3.5 text-neutral-400" />
+                <input
+                  type="text"
+                  placeholder="Search layer name, zone..."
+                  value={layerSearchTerm}
+                  onChange={(e) => setLayerSearchTerm(e.target.value)}
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-9 pr-3.5 py-1.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+                />
               </div>
+            </div>
+          </div>
 
-              {conflicts.length === 0 && (
-                <div className="flex items-center space-x-2 text-xs text-slate-500 py-1">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>
-                    Click a zone polygon on the map to run real-time conflict detection against LDA, WASA, MCL and Walled City Authority boundaries.
-                  </span>
-                </div>
-              )}
+          {/* Full-width Detailed Layer Rows */}
+          <div className="space-y-3">
+            {filteredLayers.map((layer) => {
+              const isSelected = selectedLayerId === (layer.layerId || layer.id);
+              return (
+                <div
+                  key={layer.id || layer.layerId}
+                  onClick={() => setSelectedLayerId(layer.layerId || layer.id)}
+                  className={`border rounded-2xl p-5 transition-all shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4 cursor-pointer ${
+                    isSelected
+                      ? 'bg-neutral-50/90 border-neutral-900/80 ring-1 ring-neutral-900/20'
+                      : 'bg-white hover:bg-neutral-50/50 border-neutral-200/80'
+                  }`}
+                >
+                  {/* Left Layer Meta */}
+                  <div className="space-y-2 min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: layer.color || '#18181B' }} />
+                      <h4 className="font-bold text-sm text-neutral-900 tracking-tight">{layer.name}</h4>
+                      
+                      <span className="text-[10px] font-mono font-bold bg-neutral-100 text-neutral-800 px-2 py-0.5 rounded border border-neutral-200">
+                        {layer.layerId || layer.id}
+                      </span>
 
-              <div className="space-y-2">
-                {conflicts.map((c, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-slate-950 border border-slate-800 p-3.5 rounded-2xl text-xs space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className={`text-[9px] px-2 py-0.5 rounded font-mono font-bold ${
-                          c.severity === 'HIGH'
-                            ? 'bg-rose-500/20 text-rose-400'
-                            : 'bg-amber-500/20 text-amber-400'
-                        }`}>
-                          {c.severity}
-                        </span>
-                        <span className="font-bold text-white">{c.message}</span>
-                      </div>
-                      {c.requires_joint_approval && (
-                        <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded font-mono shrink-0">
-                          Joint Approval Required
+                      <span className="text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded">
+                        {layer.department}
+                      </span>
+
+                      <span className="text-[10px] font-semibold bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded">
+                        {layer.zone_type || 'Zoning Corridor'}
+                      </span>
+
+                      {layer.commercialization_status && (
+                        <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded">
+                          {layer.commercialization_status}
                         </span>
                       )}
                     </div>
 
-                    <div className="flex items-center space-x-4 text-[10px] text-slate-400 font-mono">
-                      <span>
-                        Zone: <span className="text-amber-300 font-bold">{c.conflicting_zone_id}</span>
-                      </span>
-                      <span>
-                        Dept: <span className="text-cyan-300 font-bold">{c.department}</span>
-                      </span>
-                      <span>
-                        Overlap: <span className="text-slate-300">{c.overlap_area_sq_m} sq m</span>
-                      </span>
-                    </div>
-
-                    {c.conflict_type && (
-                      <div className="text-[10px] text-slate-500 font-mono">
-                        Conflict Type: <span className="text-slate-300">{c.conflict_type}</span>
-                        {c.resolution_body && (
-                          <> · Resolution Body: <span className="text-blue-300">{c.resolution_body}</span></>
-                        )}
+                    {/* Bylaw Parameters Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 text-xs pt-1 text-neutral-600">
+                      <div>
+                        <span className="text-[10px] text-neutral-400 uppercase tracking-wider block font-bold">FAR Limit</span>
+                        <span className="font-bold text-neutral-900">{layer.far || '1:8 High Density'}</span>
                       </div>
-                    )}
-
-                    <div className="text-[10px] text-slate-500 font-mono pt-0.5 border-t border-slate-800">
-                      Governing Rule: <span className="text-slate-400">{c.existing_rule}</span>
+                      <div>
+                        <span className="text-[10px] text-neutral-400 uppercase tracking-wider block font-bold">Max Height</span>
+                        <span className="font-bold text-neutral-900">{layer.max_height_ft ? `${layer.max_height_ft} ft` : '120 ft'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-400 uppercase tracking-wider block font-bold">Front Setback</span>
+                        <span className="font-bold text-neutral-900">{layer.setback_front_ft ? `${layer.setback_front_ft} ft` : '20 ft'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-400 uppercase tracking-wider block font-bold">Side Setback</span>
+                        <span className="font-bold text-neutral-900">{layer.setback_side_ft ? `${layer.setback_side_ft} ft` : '10 ft'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-400 uppercase tracking-wider block font-bold">DC Rate %</span>
+                        <span className="font-bold text-neutral-900">{layer.dc_rate_percent ? `${layer.dc_rate_percent}%` : '20% DC Rate'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-400 uppercase tracking-wider block font-bold">Gazette Ref</span>
+                        <span className="font-bold text-neutral-900 truncate block">{layer.gazette_reference || 'LDA Gazette 2026'}</span>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
+
+                  {/* Right Actions */}
+                  <div className="flex items-center space-x-2 shrink-0 self-end lg:self-center">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedLayerId(layer.layerId || layer.id);
+                        setSelectedZone(layer.geojson?.properties || layer);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                        isSelected
+                          ? 'bg-neutral-900 text-white shadow-xs'
+                          : 'bg-white hover:bg-neutral-100 text-neutral-800 border border-neutral-200'
+                      }`}
+                    >
+                      <FiEye className="w-3.5 h-3.5" />
+                      <span>{isSelected ? 'Active On Map' : 'Select Layer'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
+
       </div>
     </div>
   );
